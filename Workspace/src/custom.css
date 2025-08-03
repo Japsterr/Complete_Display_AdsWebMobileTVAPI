@@ -1,39 +1,512 @@
-/* Custom Bootstrap enhancements */
+/* 🎨 DisplayAds Modern Theme - Professional Digital Signage Colors */
 
-/* Footer hover effects */
-.hover-text-light:hover {
-  color: #f8f9fa !important;
-  transition: color 0.2s ease;
+:root {
+  /* Primary Brand Colors - Digital Blue Gradient */
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --primary-dark: #4c51bf;
+  --primary-light: #a5b4fc;
+  
+  /* Secondary Colors - Digital Signage Orange */
+  --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --accent-color: #ff6b6b;
+  --accent-light: #ffa8a8;
+  
+  /* Success Colors - Tech Green */
+  --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --success-color: #10b981;
+  
+  /* Warning Colors - Digital Gold */
+  --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  --warning-color: #f59e0b;
+  
+  /* Background Colors - Modern Grays */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #e2e8f0;
+  --bg-dark: #1e293b;
+  --bg-card: #ffffff;
+  
+  /* Text Colors */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-light: #94a3b8;
+  --text-white: #ffffff;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
-/* Social media icons hover */
-footer a i:hover {
-  color: #0d6efd !important;
-  transition: color 0.2s ease;
-  transform: scale(1.1);
-}
-
-/* Navbar brand hover effect */
-.navbar-brand:hover {
-  transform: scale(1.05);
-  transition: transform 0.2s ease;
-}
-
-/* Button hover enhancements */
-.btn:hover {
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-
-/* Card hover effect */
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+/* Override Bootstrap Primary Colors */
+.btn-primary {
+  background: var(--primary-gradient);
+  border: none;
+  color: var(--text-white);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
   transition: all 0.3s ease;
 }
 
-/* Custom primary color (keeping it consistent with the indigo theme) */
-:root {
-  --bs-primary: #4f46e5;
-  --bs-primary-rgb: 79, 70, 229;
+.btn-primary:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+  background: var(--secondary-gradient);
+  border: none;
+  color: var(--text-white);
+  font-weight: 600;
+}
+
+.btn-success {
+  background: var(--success-gradient);
+  border: none;
+  color: var(--text-white);
+}
+
+/* Modern Card Styling */
+.card {
+  background: var(--bg-card);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.card-header {
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+  font-weight: 600;
+  padding: 1rem 1.5rem;
+}
+
+/* Navbar Styling */
+.navbar {
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid var(--bg-secondary);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.navbar-nav .nav-link {
+  color: var(--text-primary) !important;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover {
+  color: var(--primary-dark) !important;
+}
+
+/* Sidebar Styling */
+.sidebar {
+  background: var(--bg-card);
+  box-shadow: var(--shadow-md);
+  border-right: 1px solid var(--bg-secondary);
+}
+
+.sidebar .nav-link {
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-md);
+  margin: 0.25rem 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  transform: translateX(4px);
+}
+
+/* Dashboard Statistics Cards */
+.stats-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+  border-left: 4px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary-gradient);
+}
+
+.stats-card.campaigns::before {
+  background: var(--primary-gradient);
+}
+
+.stats-card.media::before {
+  background: var(--success-gradient);
+}
+
+.stats-card.displays::before {
+  background: var(--secondary-gradient);
+}
+
+.stats-card.views::before {
+  background: var(--warning-gradient);
+}
+
+.stats-card h3 {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.stats-card p {
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 0;
+}
+
+/* Form Styling */
+.form-control {
+  border: 2px solid var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus {
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.15);
+}
+
+.form-label {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* Table Styling */
+.table {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.table thead th {
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  font-weight: 600;
+  border: none;
+  padding: 1rem;
+}
+
+.table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background-color: var(--bg-primary);
+}
+
+/* Modal Styling */
+.modal-content {
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.modal-header {
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* Alert Styling */
+.alert {
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+  color: var(--success-color);
+  border-left: 4px solid var(--success-color);
+}
+
+.alert-danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+  color: #dc2626;
+  border-left: 4px solid #dc2626;
+}
+
+.alert-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+  color: var(--warning-color);
+  border-left: 4px solid var(--warning-color);
+}
+
+/* Badge Styling */
+.badge {
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.badge.bg-success {
+  background: var(--success-gradient) !important;
+}
+
+.badge.bg-warning {
+  background: var(--warning-gradient) !important;
+}
+
+.badge.bg-primary {
+  background: var(--primary-gradient) !important;
+}
+
+/* Page Background */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.main-content {
+  background: var(--bg-primary);
+  min-height: 100vh;
+}
+
+/* Loading Spinner */
+.spinner-border-primary {
+  color: var(--primary-dark);
+}
+
+/* Hover Effects */
+.hover-scale:hover {
+  transform: scale(1.02);
+  transition: transform 0.2s ease;
+}
+
+.hover-shadow:hover {
+  box-shadow: var(--shadow-lg);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Feature Cards */
+.feature-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  text-align: center;
+  border: none;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary-gradient);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover::before {
+  transform: scaleX(1);
+}
+
+.feature-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-xl);
+}
+
+.feature-icon {
+  width: 80px;
+  height: 80px;
+  background: var(--primary-gradient);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 2rem;
+  color: var(--text-white);
+}
+
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: var(--text-white);
+  padding: 6rem 0;
+}
+
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+/* Pricing Cards */
+.pricing-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  border: 2px solid var(--bg-secondary);
+  transition: all 0.3s ease;
+  position: relative;
+  height: 100%;
+}
+
+.pricing-card.featured {
+  border-color: var(--primary-dark);
+  transform: scale(1.05);
+  box-shadow: var(--shadow-xl);
+}
+
+.pricing-card.featured::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary-gradient);
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.pricing-card.featured:hover {
+  transform: scale(1.05) translateY(-4px);
+}
+
+.popular-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--secondary-gradient);
+  color: var(--text-white);
+  padding: 0.5rem 1.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.price-display .price {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  line-height: 1;
+}
+
+.price-display .period {
+  font-size: 1.2rem;
+  vertical-align: middle;
+}
+
+.features-list ul li {
+  text-align: left;
+  padding: 0.25rem 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.5rem;
+  }
+  
+  .stats-card h3 {
+    font-size: 2rem;
+  }
+  
+  .feature-card {
+    margin-bottom: 2rem;
+  }
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.6s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.6s ease-out;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* QR Code Highlight */
+.qr-highlight {
+  background: var(--secondary-gradient);
+  color: var(--text-white);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+/* Mobile First Badge */
+.mobile-first-badge {
+  background: var(--success-gradient);
+  color: var(--text-white);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 1rem;
 }

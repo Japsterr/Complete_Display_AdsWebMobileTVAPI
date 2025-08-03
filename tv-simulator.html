@@ -77,7 +77,11 @@
             object-fit: contain; /* Show full image, scaled to fit */
             object-position: center;
             background-color: #000; /* Black background for any gaps */
-            transform: rotate(90deg); /* Rotate image 90 degrees for portrait display */
+            transition: transform 0.3s ease; /* Smooth rotation transition */
+        }
+        
+        .media-display.landscape-rotated {
+            transform: rotate(90deg); /* Only rotate landscape images */
         }
         
         .campaign-info {
@@ -288,6 +292,12 @@
                 return;
             }
             
+            // Ensure currentMediaIndex is within bounds (in case media was removed)
+            if (currentMediaIndex >= campaign.media_items.length) {
+                currentMediaIndex = 0;
+                console.log('Media index adjusted due to campaign changes');
+            }
+            
             // Record impression for previous media if it existed
             if (currentMediaStartTime && campaign.media_items[currentMediaIndex]) {
                 const previousMedia = campaign.media_items[currentMediaIndex];
@@ -300,12 +310,39 @@
             const mediaElement = document.getElementById('media-display');
             
             // Use actual media files from the server
-            mediaElement.src = API_BASE.replace('/api/v1', '') + media.file_path;
+            const imageUrl = API_BASE.replace('/api/v1', '') + media.file_path;
+            
+            // Create a temporary image to detect orientation
+            const tempImage = new Image();
+            tempImage.onload = function() {
+                const imageWidth = this.naturalWidth;
+                const imageHeight = this.naturalHeight;
+                const isLandscape = imageWidth > imageHeight;
+                
+                console.log(`Image dimensions: ${imageWidth}x${imageHeight}, Landscape: ${isLandscape}`);
+                
+                // Apply rotation only to landscape images
+                if (isLandscape) {
+                    mediaElement.classList.add('landscape-rotated');
+                    console.log('Applied landscape rotation');
+                } else {
+                    mediaElement.classList.remove('landscape-rotated');
+                    console.log('No rotation needed (portrait/square image)');
+                }
+                
+                // Set the image source after determining orientation
+                mediaElement.src = imageUrl;
+            };
+            
+            // Load the image to detect dimensions
+            tempImage.src = imageUrl;
             
             // Update info
             document.getElementById('campaign-name').textContent = campaign.campaign_name;
             document.getElementById('media-info').textContent = 
                 `${media.name} (${currentMediaIndex + 1}/${campaign.media_items.length}) - ${media.duration}s`;
+            
+            console.log(`Displaying media ${currentMediaIndex + 1}/${campaign.media_items.length}: ${media.name}`);
             
             // Record start time for tracking
             currentMediaStartTime = Date.now();
@@ -316,6 +353,7 @@
                 // Record completed impression
                 recordMediaImpression(media, media.duration, true);
                 
+                // Move to next media (with bounds checking)
                 currentMediaIndex = (currentMediaIndex + 1) % campaign.media_items.length;
                 displayMedia();
             }, media.duration * 1000);
@@ -350,20 +388,49 @@
                     showScreen('player');
                     displayMedia();
                     
-                    // Start polling for campaign updates
+                    // Start polling for campaign updates more frequently
                     setInterval(async () => {
                         try {
                             const updatedCampaign = await getCurrentCampaign();
                             if (updatedCampaign) {
-                                campaign = updatedCampaign;
-                                // Reset to first media if campaign changed
-                                currentMediaIndex = 0;
-                                displayMedia();
+                                const oldMediaCount = campaign ? campaign.media_items.length : 0;
+                                const newMediaCount = updatedCampaign.media_items.length;
+                                
+                                // Check if campaign has changed (different media count or content)
+                                const campaignChanged = !campaign || 
+                                    oldMediaCount !== newMediaCount ||
+                                    JSON.stringify(campaign.media_items) !== JSON.stringify(updatedCampaign.media_items);
+                                
+                                if (campaignChanged) {
+                                    console.log(`Campaign updated: ${oldMediaCount} -> ${newMediaCount} media items`);
+                                    
+                                    // Update campaign data
+                                    campaign = updatedCampaign;
+                                    
+                                    // Smart index handling: only reset if we're past the new media count
+                                    if (currentMediaIndex >= newMediaCount) {
+                                        currentMediaIndex = 0;
+                                        console.log('Media index reset due to reduced media count');
+                                    }
+                                    
+                                    // If we added new media and we're on the last item, continue to new media
+                                    if (newMediaCount > oldMediaCount && currentMediaIndex === oldMediaCount - 1) {
+                                        console.log('New media detected, will show new items in rotation');
+                                    }
+                                    
+                                    // Update the display info immediately
+                                    if (currentState === 'PLAYER') {
+                                        const media = campaign.media_items[currentMediaIndex];
+                                        document.getElementById('campaign-name').textContent = campaign.campaign_name;
+                                        document.getElementById('media-info').textContent = 
+                                            `${media.name} (${currentMediaIndex + 1}/${campaign.media_items.length}) - ${media.duration}s`;
+                                    }
+                                }
                             }
                         } catch (error) {
                             console.error('Campaign update error:', error);
                         }
-                    }, 30000); // Check every 30 seconds
+                    }, 10000); // Check every 10 seconds for faster updates
                     
                     // Start heartbeat
                     sendHeartbeat(); // Send initial heartbeat

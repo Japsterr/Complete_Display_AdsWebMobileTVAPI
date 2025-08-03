@@ -7,10 +7,28 @@ class Plan(models.Model):
     plan_id = models.AutoField(primary_key=True)
     plan_name = models.CharField(max_length=50, unique=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    currency = models.CharField(max_length=10, default='USD')
-    max_screens = models.IntegerField()
-    max_storage_gb = models.FloatField()
+    currency = models.CharField(max_length=10, default='ZAR')  # Changed to ZAR
+    
+    # Feature Limitations
+    max_campaigns = models.IntegerField(default=3)
+    max_displays = models.IntegerField(default=5)
+    max_images = models.IntegerField(default=10)
+    max_videos = models.IntegerField(default=0)  # Free tier has no video
+    max_users = models.IntegerField(default=1)
+    max_storage_gb = models.FloatField(default=1.0)
+    
+    # Feature Access
+    has_video_support = models.BooleanField(default=False)
+    has_advanced_analytics = models.BooleanField(default=False)
+    has_api_access = models.BooleanField(default=False)
+    has_custom_branding = models.BooleanField(default=False)
+    has_priority_support = models.BooleanField(default=False)
+    has_advanced_scheduling = models.BooleanField(default=False)
+    
+    # Legacy fields (keep for compatibility)
+    max_screens = models.IntegerField(default=5)  # Alias for max_displays
     has_multi_user = models.BooleanField(default=False)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -18,12 +36,13 @@ class Plan(models.Model):
         db_table = 'Plans'
 
     def __str__(self):
-        return self.plan_name
+        return f"{self.plan_name} (R{self.price}/month)"
 
 class User(AbstractBaseUser, PermissionsMixin):
     ACCOUNT_TYPE_CHOICES = [
         ('free', 'Free'),
-        ('business', 'Business'),
+        ('starter', 'Starter'),
+        ('professional', 'Professional'),
         ('enterprise', 'Enterprise'),
     ]
     # Use default 'id' field (AutoField primary key) for compatibility with Django and JWT
@@ -38,6 +57,31 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
+    
+    def get_plan_limits(self):
+        """Get the current plan limits for this user"""
+        if self.plan:
+            return {
+                'max_campaigns': self.plan.max_campaigns,
+                'max_displays': self.plan.max_displays,
+                'max_images': self.plan.max_images,
+                'max_videos': self.plan.max_videos,
+                'max_users': self.plan.max_users,
+                'has_video_support': self.plan.has_video_support,
+                'has_advanced_analytics': self.plan.has_advanced_analytics,
+                'has_api_access': self.plan.has_api_access,
+            }
+        # Default free tier limits if no plan assigned
+        return {
+            'max_campaigns': 3,
+            'max_displays': 5,
+            'max_images': 10,
+            'max_videos': 0,
+            'max_users': 1,
+            'has_video_support': False,
+            'has_advanced_analytics': False,
+            'has_api_access': False,
+        }
 
     class Meta:
         db_table = 'Users'
