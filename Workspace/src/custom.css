@@ -1,0 +1,39 @@
+/* Custom Bootstrap enhancements */
+
+/* Footer hover effects */
+.hover-text-light:hover {
+  color: #f8f9fa !important;
+  transition: color 0.2s ease;
+}
+
+/* Social media icons hover */
+footer a i:hover {
+  color: #0d6efd !important;
+  transition: color 0.2s ease;
+  transform: scale(1.1);
+}
+
+/* Navbar brand hover effect */
+.navbar-brand:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+/* Button hover enhancements */
+.btn:hover {
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* Card hover effect */
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+  transition: all 0.3s ease;
+}
+
+/* Custom primary color (keeping it consistent with the indigo theme) */
+:root {
+  --bs-primary: #4f46e5;
+  --bs-primary-rgb: 79, 70, 229;
+}

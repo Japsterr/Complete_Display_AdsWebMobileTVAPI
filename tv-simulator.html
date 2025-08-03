@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Signage TV Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        /* Portrait orientation container for digital signage */
+        .container {
+            width: 100vw; /* Full width */
+            height: 100vh; /* Full height */
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            box-sizing: border-box;
+            position: relative;
+        }
+        
+        .loading-screen, .activation-screen, .player-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .loading-text {
+            font-size: 48px;
+            margin-top: 20px;
+        }
+        
+        .device-id {
+            font-size: 36px;
+            font-family: monospace;
+            margin: 20px 0;
+        }
+        
+        .activation-code {
+            font-size: 72px;
+            font-family: monospace;
+            letter-spacing: 8px;
+            margin: 30px 0;
+        }
+        
+        .instructions {
+            font-size: 24px;
+            line-height: 1.5;
+            max-width: 800px;
+        }
+        
+        .instructions h3 {
+            font-size: 28px;
+            margin: 30px 0 20px 0;
+        }
+        
+        .media-display {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain; /* Show full image, scaled to fit */
+            object-position: center;
+            background-color: #000; /* Black background for any gaps */
+            transform: rotate(90deg); /* Rotate image 90 degrees for portrait display */
+        }
+        
+        .campaign-info {
+            position: absolute;
+            top: 20px; /* Moved to top for better visibility in portrait */
+            left: 20px;
+            right: 20px; /* Full width for portrait layout */
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 18px; /* Slightly larger for portrait displays */
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .error {
+            color: #ff5252;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        .success {
+            color: #4caf50;
+            font-size: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #333;
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="loading-screen">
+            <div class="spinner"></div>
+            <div class="loading-text">Initializing...</div>
+        </div>
+        
+        <!-- Activation Screen -->
+        <div id="activation-screen" class="activation-screen hidden">
+            <h2>Device ID:</h2>
+            <div id="device-id" class="device-id">TV-TEST-001</div>
+            
+            <h2>Activation Code:</h2>
+            <div id="activation-code" class="activation-code">ABC123</div>
+            
+            <div class="instructions">
+                <h3>To start displaying ads:</h3>
+                <p>1. Log in to your account on the web</p>
+                <p>2. Go to Displays → Register New Display</p>
+                <p>3. Enter the code above</p>
+                <p>4. Assign a campaign to this display</p>
+            </div>
+            
+            <div id="polling-status" class="success" style="margin-top: 30px;">
+                <div class="spinner" style="width: 20px; height: 20px; display: inline-block; margin-right: 10px;"></div>
+                Waiting for activation...
+            </div>
+        </div>
+        
+        <!-- Player Screen -->
+        <div id="player-screen" class="player-screen hidden">
+            <img id="media-display" class="media-display" alt="Campaign Media" />
+            
+            <div class="campaign-info">
+                <div id="campaign-name">Test Campaign</div>
+                <div id="media-info">Loading...</div>
+            </div>
+        </div>
+        
+        <!-- Error Screen -->
+        <div id="error-screen" class="loading-screen hidden">
+            <div class="error" id="error-message">Connection Error</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api/v1';
+        const DEVICE_ID = 'TEST-TV-001';
+        
+        let currentState = 'LOADING';
+        let campaign = null;
+        let currentMediaIndex = 0;
+        let mediaTimer = null;
+        let heartbeatInterval = null;
+        let currentMediaStartTime = null;
+        
+        // DOM elements
+        const screens = {
+            loading: document.getElementById('loading-screen'),
+            activation: document.getElementById('activation-screen'),
+            player: document.getElementById('player-screen'),
+            error: document.getElementById('error-screen')
+        };
+        
+        function showScreen(screenName) {
+            // Hide all screens
+            Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+            // Show target screen
+            if (screens[screenName]) {
+                screens[screenName].classList.remove('hidden');
+            }
+            currentState = screenName.toUpperCase();
+            console.log(`State changed to: ${currentState}`);
+        }
+        
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            showScreen('error');
+        }
+        
+        async function checkActivationStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/devices/check-activation/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ device_id: DEVICE_ID })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Activation check failed:', error);
+                throw error;
+            }
+        }
+        
+        async function getCurrentCampaign() {
+            try {
+                const response = await fetch(`${API_BASE}/devices/current-campaign/?device_id=${DEVICE_ID}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return null; // No campaign assigned
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Campaign fetch failed:', error);
+                throw error;
+            }
+        }
+        
+        // Analytics and Tracking Functions
+        async function sendHeartbeat() {
+            try {
+                await fetch(`${API_BASE}/analytics/heartbeat/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_id: DEVICE_ID,
+                        status: 'online',
+                        device_info: {
+                            user_agent: navigator.userAgent,
+                            screen_resolution: `${screen.width}x${screen.height}`,
+                            timestamp: new Date().toISOString()
+                        }
+                    })
+                });
+            } catch (error) {
+                console.log('Heartbeat failed:', error);
+            }
+        }
+
+        async function recordMediaImpression(media, duration_shown, completed = false) {
+            try {
+                await fetch(`${API_BASE}/analytics/impression/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_id: DEVICE_ID,
+                        media_id: media.media_id,
+                        campaign_id: campaign.campaign,
+                        duration_shown: duration_shown,
+                        scheduled_duration: media.duration,
+                        completed: completed,
+                        sequence_number: currentMediaIndex,
+                        total_media_in_campaign: campaign.media_items.length
+                    })
+                });
+                console.log(`Recorded impression: ${media.name} - ${duration_shown}s (${completed ? 'completed' : 'partial'})`);
+            } catch (error) {
+                console.log('Failed to record impression:', error);
+            }
+        }
+
+        function displayMedia() {
+            if (!campaign || !campaign.media_items || campaign.media_items.length === 0) {
+                document.getElementById('media-info').textContent = 'No media available';
+                return;
+            }
+            
+            // Record impression for previous media if it existed
+            if (currentMediaStartTime && campaign.media_items[currentMediaIndex]) {
+                const previousMedia = campaign.media_items[currentMediaIndex];
+                const actualDuration = Math.floor((Date.now() - currentMediaStartTime) / 1000);
+                const wasCompleted = actualDuration >= (previousMedia.duration - 1); // Allow 1s tolerance
+                recordMediaImpression(previousMedia, actualDuration, wasCompleted);
+            }
+            
+            const media = campaign.media_items[currentMediaIndex];
+            const mediaElement = document.getElementById('media-display');
+            
+            // Use actual media files from the server
+            mediaElement.src = API_BASE.replace('/api/v1', '') + media.file_path;
+            
+            // Update info
+            document.getElementById('campaign-name').textContent = campaign.campaign_name;
+            document.getElementById('media-info').textContent = 
+                `${media.name} (${currentMediaIndex + 1}/${campaign.media_items.length}) - ${media.duration}s`;
+            
+            // Record start time for tracking
+            currentMediaStartTime = Date.now();
+            
+            // Set timer for next media
+            if (mediaTimer) clearTimeout(mediaTimer);
+            mediaTimer = setTimeout(() => {
+                // Record completed impression
+                recordMediaImpression(media, media.duration, true);
+                
+                currentMediaIndex = (currentMediaIndex + 1) % campaign.media_items.length;
+                displayMedia();
+            }, media.duration * 1000);
+        }
+        
+        async function startPollingActivation() {
+            const pollInterval = setInterval(async () => {
+                try {
+                    const status = await checkActivationStatus();
+                    
+                    if (status.activated) {
+                        clearInterval(pollInterval);
+                        console.log('Device activated!', status);
+                        
+                        // Try to load campaign
+                        await loadCampaign();
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    // Continue polling despite errors
+                }
+            }, 3000); // Poll every 3 seconds
+        }
+        
+        async function loadCampaign() {
+            try {
+                const campaignData = await getCurrentCampaign();
+                
+                if (campaignData && campaignData.media_items && campaignData.media_items.length > 0) {
+                    campaign = campaignData;
+                    currentMediaIndex = 0;
+                    showScreen('player');
+                    displayMedia();
+                    
+                    // Start polling for campaign updates
+                    setInterval(async () => {
+                        try {
+                            const updatedCampaign = await getCurrentCampaign();
+                            if (updatedCampaign) {
+                                campaign = updatedCampaign;
+                                // Reset to first media if campaign changed
+                                currentMediaIndex = 0;
+                                displayMedia();
+                            }
+                        } catch (error) {
+                            console.error('Campaign update error:', error);
+                        }
+                    }, 30000); // Check every 30 seconds
+                    
+                    // Start heartbeat
+                    sendHeartbeat(); // Send initial heartbeat
+                    setInterval(() => {
+                        sendHeartbeat();
+                    }, 60000); // Send heartbeat every minute
+                    
+                } else {
+                    // No campaign assigned, show activation screen with different message
+                    showScreen('activation');
+                    document.getElementById('polling-status').innerHTML = 
+                        '<div style="color: #ff9800;">Device activated but no campaign assigned. Please assign a campaign in the web dashboard.</div>';
+                }
+            } catch (error) {
+                console.error('Campaign load error:', error);
+                showError('Failed to load campaign: ' + error.message);
+            }
+        }
+        
+        async function initialize() {
+            try {
+                console.log('Initializing TV app...');
+                
+                // Check if already activated
+                const status = await checkActivationStatus();
+                
+                if (status.activated) {
+                    console.log('Device already activated');
+                    await loadCampaign();
+                } else {
+                    console.log('Device needs activation');
+                    showScreen('activation');
+                    startPollingActivation();
+                }
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showScreen('activation');
+                startPollingActivation();
+            }
+        }
+        
+        // Start the app
+        setTimeout(() => {
+            initialize();
+        }, 2000); // Show loading for 2 seconds
+        
+        // Manual testing buttons (remove in production)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '1') showScreen('loading');
+            if (e.key === '2') showScreen('activation');
+            if (e.key === '3') initialize();
+            if (e.key === '4') loadCampaign();
+        });
+        
+        console.log('Digital Signage TV Simulator loaded. Press 1-4 for manual testing.');
+    </script>
+</body>
+</html>

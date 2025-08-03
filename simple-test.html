@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple TV Test</title>
+    <style>
+        body { 
+            background: black; 
+            color: white; 
+            font-family: Arial; 
+            padding: 20px; 
+            font-size: 24px;
+        }
+        .status { margin: 20px 0; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Digital Signage TV Test</h1>
+    <div id="status">Loading...</div>
+    <div id="results"></div>
+
+    <script>
+        async function testAPI() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                statusDiv.innerHTML = 'Testing API connection...';
+                
+                // Test the campaign API
+                const response = await fetch('http://127.0.0.1:8000/api/v1/devices/current-campaign/?device_id=TEST-TV-001');
+                
+                statusDiv.innerHTML = `Response status: ${response.status}`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultsDiv.innerHTML = `
+                        <div class="success">✅ API Connected!</div>
+                        <div>Campaign: ${data.campaign_name}</div>
+                        <div>Media items: ${data.media_items.length}</div>
+                        <div>First media: ${data.media_items[0]?.name}</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `<div class="error">❌ API Error: ${response.status}</div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ Connection failed</div>`;
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                console.error('API test failed:', error);
+            }
+        }
+        
+        // Run test when page loads
+        testAPI();
+    </script>
+</body>
+</html>

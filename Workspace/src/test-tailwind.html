@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tailwind Test</title>
+    <style>
+        .test-box {
+            background-color: #3b82f6;
+            padding: 1rem;
+            margin: 1rem;
+            color: white;
+            border-radius: 0.5rem;
+        }
+        .flex {
+            display: flex;
+        }
+        .hidden {
+            display: none;
+        }
+        @media (min-width: 768px) {
+            .md\\:flex {
+                display: flex;
+            }
+            .md\\:fixed {
+                position: fixed;
+            }
+            .md\\:w-64 {
+                width: 16rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-box">
+        This should be blue with white text
+    </div>
+    <div class="hidden md:flex test-box">
+        This should be hidden on mobile, visible on desktop
+    </div>
+    <div class="flex">
+        <div class="test-box">Item 1</div>
+        <div class="test-box">Item 2</div>
+    </div>
+</body>
+</html>

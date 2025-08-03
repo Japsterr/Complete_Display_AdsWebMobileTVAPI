@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../Workspace"
+		},
+		{
+			"path": ".."
+		},
+		{
+			"path": "../api"
+		},
+		{
+			"path": "../Mobile"
+		}
+	],
+	"settings": {}
+}
