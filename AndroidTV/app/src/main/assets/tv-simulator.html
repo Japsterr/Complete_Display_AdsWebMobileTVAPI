@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Signage TV</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .content-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .media-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        
+        .media-item {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 5px;
+        }
+        
+        .no-content {
+            text-align: center;
+            font-size: 24px;
+            opacity: 0.8;
+        }
+        
+        .status-bar {
+            background: rgba(0,0,0,0.5);
+            padding: 8px 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+        }
+        
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Remote control simulation */
+        .remote-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+        
+        .error-message {
+            background: #f44336;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-message" id="errorMessage"></div>
+    
+    <div class="header">
+        <span id="displayName">Digital Signage Display</span>
+        <span style="float: right;" id="currentTime"></span>
+    </div>
+    
+    <div class="content-area">
+        <div class="media-container" id="mediaContainer">
+            <div class="no-content" id="noContent">
+                <h2>Welcome to Digital Signage</h2>
+                <p>Waiting for content...</p>
+                <p style="margin-top: 20px; font-size: 16px;">Device ID: <span id="deviceId">Loading...</span></p>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Loading content...</p>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Connected</span>
+        </div>
+        <div>
+            <span id="lastUpdate">Last updated: Never</span>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - Will be replaced by Android app
+        const API_BASE = 'http://127.0.0.1:8000/api/v1';
+        let DEVICE_ID = 'TEST-TV-001';
+        
+        // Android WebView integration
+        if (typeof window.DEVICE_INFO !== 'undefined') {
+            DEVICE_ID = window.DEVICE_INFO.deviceId;
+        }
+        
+        let currentMedia = null;
+        let refreshInterval = 30000; // 30 seconds
+        let heartbeatInterval = 60000; // 1 minute
+        
+        // DOM elements
+        const deviceIdElement = document.getElementById('deviceId');
+        const mediaContainer = document.getElementById('mediaContainer');
+        const noContent = document.getElementById('noContent');
+        const loading = document.getElementById('loading');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const lastUpdate = document.getElementById('lastUpdate');
+        const currentTime = document.getElementById('currentTime');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Initialize
+        deviceIdElement.textContent = DEVICE_ID;
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // Main functions
+        async function fetchMedia() {
+            try {
+                showLoading(true);
+                updateStatus('connected', 'Fetching content...');
+                
+                const response = await fetch(`${API_BASE}/displays/${DEVICE_ID}/media/`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.media && data.media.length > 0) {
+                    displayMedia(data.media);
+                    updateStatus('connected', 'Content loaded');
+                } else {
+                    showNoContent();
+                    updateStatus('connected', 'No content available');
+                }
+                
+                lastUpdate.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                hideError();
+                
+            } catch (error) {
+                console.error('Error fetching media:', error);
+                updateStatus('error', 'Connection failed');
+                showError(`Failed to load content: ${error.message}`);
+                showNoContent();
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function displayMedia(mediaList) {
+            if (mediaList.length === 0) {
+                showNoContent();
+                return;
+            }
+            
+            const media = mediaList[0]; // For now, just show the first media item
+            currentMedia = media;
+            
+            mediaContainer.innerHTML = '';
+            
+            if (media.media_type === 'image') {
+                const img = document.createElement('img');
+                img.src = media.file;
+                img.className = 'media-item';
+                img.alt = media.title || 'Digital Signage Content';
+                
+                img.onerror = function() {
+                    showError(`Failed to load image: ${media.file}`);
+                    showNoContent();
+                };
+                
+                mediaContainer.appendChild(img);
+                
+            } else if (media.media_type === 'video') {
+                const video = document.createElement('video');
+                video.src = media.file;
+                video.className = 'media-item';
+                video.controls = false;
+                video.autoplay = true;
+                video.loop = true;
+                video.muted = true; // Required for autoplay
+                
+                video.onerror = function() {
+                    showError(`Failed to load video: ${media.file}`);
+                    showNoContent();
+                };
+                
+                mediaContainer.appendChild(video);
+            }
+        }
+        
+        function showNoContent() {
+            mediaContainer.innerHTML = '';
+            mediaContainer.appendChild(noContent);
+        }
+        
+        function showLoading(show) {
+            loading.style.display = show ? 'block' : 'none';
+        }
+        
+        function updateStatus(status, message) {
+            statusText.textContent = message;
+            
+            switch (status) {
+                case 'connected':
+                    statusDot.style.background = '#4CAF50';
+                    break;
+                case 'loading':
+                    statusDot.style.background = '#FF9800';
+                    break;
+                case 'error':
+                    statusDot.style.background = '#f44336';
+                    break;
+                default:
+                    statusDot.style.background = '#9E9E9E';
+            }
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+        
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+        
+        function updateTime() {
+            currentTime.textContent = new Date().toLocaleTimeString();
+        }
+        
+        async function sendHeartbeat() {
+            try {
+                const heartbeatData = {
+                    device_id: DEVICE_ID,
+                    timestamp: Date.now(),
+                    status: 'active',
+                    current_media: currentMedia ? currentMedia.id : null
+                };
+                
+                await fetch(`${API_BASE}/device-heartbeat/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(heartbeatData)
+                });
+                
+            } catch (error) {
+                console.error('Heartbeat failed:', error);
+            }
+        }
+        
+        // Remote control simulation
+        document.addEventListener('keydown', function(event) {
+            switch(event.key) {
+                case 'r':
+                case 'R':
+                    fetchMedia();
+                    break;
+                case ' ':
+                    event.preventDefault();
+                    if (currentMedia && currentMedia.media_type === 'video') {
+                        const video = document.querySelector('video');
+                        if (video) {
+                            video.paused ? video.play() : video.pause();
+                        }
+                    }
+                    break;
+            }
+        });
+        
+        // Initialize app
+        fetchMedia();
+        setInterval(fetchMedia, refreshInterval);
+        setInterval(sendHeartbeat, heartbeatInterval);
+        
+        // Handle Android WebView integration
+        if (typeof window.DEVICE_INFO !== 'undefined') {
+            console.log('Running in Android TV app:', window.DEVICE_INFO);
+        }
+    </script>
+</body>
+</html>
