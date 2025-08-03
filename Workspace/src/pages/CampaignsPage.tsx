@@ -4,18 +4,22 @@ import { PlusIcon, PencilIcon, TrashIcon, FilmIcon } from "@heroicons/react/24/o
 import api from "../services/api.ts";
 
 function StatusBadge({ status }: { status: string }) {
-  const colors = {
-    active: "bg-success",
-    paused: "bg-warning", 
-    draft: "bg-secondary",
+  const statusConfig = {
+    draft: { className: "badge bg-light text-dark", icon: "📝", text: "Draft" },
+    ready: { className: "badge bg-info text-white", icon: "✅", text: "Ready" },
+    active: { className: "badge bg-success text-white", icon: "🟢", text: "Active" },
+    paused: { className: "badge bg-warning text-dark", icon: "⏸️", text: "Paused" },
+    scheduled: { className: "badge bg-primary text-white", icon: "⏰", text: "Scheduled" },
+    expired: { className: "badge bg-danger text-white", icon: "❌", text: "Expired" },
   };
   
-  // Default to 'draft' if status is undefined or null
   const safeStatus = status || 'draft';
+  const config = statusConfig[safeStatus as keyof typeof statusConfig] || statusConfig.draft;
   
   return (
-    <span className={`badge ${colors[safeStatus as keyof typeof colors] || colors.draft}`}>
-      {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
+    <span className={config.className}>
+      <span className="me-1">{config.icon}</span>
+      {config.text}
     </span>
   );
 }
@@ -27,19 +31,12 @@ export default function CampaignsPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("CampaignsPage: Loading campaigns...");
-    console.log("Current token:", localStorage.getItem("access_token"));
-    console.log("API base URL:", "http://127.0.0.1:8000/api/v1/");
-    
     api.get("/campaigns/")
       .then(res => {
-        console.log("CampaignsPage: API response:", res.data);
         setCampaigns(res.data);
         setLoading(false);
       })
       .catch(err => {
-        console.error("CampaignsPage: API error:", err);
-        console.error("Error response:", err.response);
         setError(`Failed to load campaigns: ${err.message}`);
         setLoading(false);
       });
@@ -50,20 +47,19 @@ export default function CampaignsPage() {
       try {
         await api.delete(`/campaigns/${id}/`);
         setCampaigns(campaigns.filter(c => c.campaign_id !== id));
-      } catch (error) {
-        console.error("Failed to delete campaign:", error);
+      } catch (err: any) {
+        setError(`Failed to delete campaign: ${err.message}`);
       }
     }
   };
 
   return (
-    <div className="container-fluid">
-      <div className="d-flex justify-content-between align-items-start mb-4">
+    <div className="container-fluid py-4">
+      {/* Page Header */}
+      <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1 className="h2 mb-1">Campaigns</h1>
-          <p className="text-muted">
-            Create and manage your digital signage campaigns.
-          </p>
+          <h1 className="h3 mb-1">Campaigns</h1>
+          <p className="text-muted mb-0">Create and manage your digital signage campaigns.</p>
         </div>
         <button
           type="button"
@@ -75,22 +71,16 @@ export default function CampaignsPage() {
         </button>
       </div>
 
+      {/* Content */}
       {loading ? (
-        <div className="d-flex justify-content-center align-items-center" style={{ height: "200px" }}>
+        <div className="d-flex justify-content-center py-5">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
         </div>
       ) : error ? (
         <div className="alert alert-danger" role="alert">
-          <h4 className="alert-heading">Error!</h4>
-          <p>{error}</p>
-          <button 
-            className="btn btn-outline-danger" 
-            onClick={() => window.location.reload()}
-          >
-            Try Again
-          </button>
+          {error}
         </div>
       ) : campaigns.length === 0 ? (
         <div className="card">
@@ -112,7 +102,7 @@ export default function CampaignsPage() {
         </div>
       ) : (
         <div className="card">
-          <div className="card-header">
+          <div className="card-header bg-white">
             <h5 className="card-title mb-0">All Campaigns</h5>
           </div>
           <div className="card-body p-0">
@@ -120,56 +110,82 @@ export default function CampaignsPage() {
               <table className="table table-hover mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th scope="col">Campaign</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Created</th>
-                    <th scope="col" className="text-end">Actions</th>
+                    <th className="px-4 py-3">Campaign</th>
+                    <th className="px-3 py-3">Status</th>
+                    <th className="px-3 py-3 text-center">Media</th>
+                    <th className="px-3 py-3">Schedule</th>
+                    <th className="px-3 py-3">Created</th>
+                    <th className="px-4 py-3 text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {campaigns.map((campaign) => (
                     <tr key={campaign.campaign_id}>
-                      <td>
+                      <td className="px-4 py-3">
                         <div>
-                          <div className="fw-medium">{campaign.name}</div>
+                          <div className="fw-semibold">{campaign.name}</div>
                           {campaign.description && (
                             <small className="text-muted">{campaign.description}</small>
                           )}
                         </div>
                       </td>
-                      <td>
+                      <td className="px-3 py-3">
                         <StatusBadge status={campaign.status} />
                       </td>
-                      <td>
+                      <td className="px-3 py-3 text-center">
+                        <div className="fw-semibold">{campaign.media_count || 0}</div>
+                        <small className="text-muted">
+                          {campaign.total_duration ? `${campaign.total_duration}s` : '0s'}
+                        </small>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="small">
+                          {campaign.start_date ? (
+                            <>
+                              <div className="text-success">
+                                📅 {new Date(campaign.start_date).toLocaleDateString()}
+                              </div>
+                              {campaign.end_date && (
+                                <div className="text-danger">
+                                  ⏰ {new Date(campaign.end_date).toLocaleDateString()}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-muted">Not scheduled</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
                         <small className="text-muted">
                           {campaign.created_at ? new Date(campaign.created_at).toLocaleDateString() : 'N/A'}
                         </small>
                       </td>
-                      <td className="text-end">
-                        <div className="btn-group" role="group">
+                      <td className="px-4 py-3 text-end">
+                        <div className="btn-group btn-group-sm" role="group">
                           <button
                             type="button"
-                            className="btn btn-outline-primary btn-sm"
+                            className="btn btn-outline-primary"
                             onClick={() => navigate(`/campaigns/${campaign.campaign_id}/edit`)}
                             title="Edit Campaign"
                           >
-                            <PencilIcon style={{ width: '16px', height: '16px' }} />
+                            <PencilIcon style={{ width: '14px', height: '14px' }} />
                           </button>
                           <button
                             type="button"
-                            className="btn btn-outline-secondary btn-sm"
+                            className="btn btn-outline-secondary"
                             onClick={() => navigate(`/campaigns/${campaign.campaign_id}/media`)}
-                            title="Edit Media Playlist"
+                            title="Manage Media"
                           >
-                            <FilmIcon style={{ width: '16px', height: '16px' }} />
+                            <FilmIcon style={{ width: '14px', height: '14px' }} />
                           </button>
                           <button
                             type="button"
-                            className="btn btn-outline-danger btn-sm"
+                            className="btn btn-outline-danger"
                             onClick={() => handleDelete(campaign.campaign_id)}
                             title="Delete Campaign"
                           >
-                            <TrashIcon style={{ width: '16px', height: '16px' }} />
+                            <TrashIcon style={{ width: '14px', height: '14px' }} />
                           </button>
                         </div>
                       </td>

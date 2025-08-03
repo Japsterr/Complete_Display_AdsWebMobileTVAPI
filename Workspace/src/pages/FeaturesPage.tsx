@@ -292,19 +292,19 @@ const FeaturesPage: React.FC = () => {
                 Ready to Transform Your Digital Signage?
               </h2>
               <p className="lead mb-4 opacity-90">
-                Join the mobile-first revolution in digital signage. Start your free trial today 
+                Join the mobile-first revolution in digital signage. Start with our free plan today 
                 and experience the power of QR code activation.
               </p>
               <div className="d-flex justify-content-center gap-3 flex-wrap">
                 <a href="/register" className="btn btn-light btn-lg px-5">
-                  <strong>Start Free Trial</strong>
+                  <strong>Start Free Plan</strong>
                 </a>
                 <a href="/contact" className="btn btn-outline-light btn-lg px-5">
                   Schedule Demo
                 </a>
               </div>
               <p className="mt-3 opacity-75">
-                <small>No credit card required • 14-day free trial • Cancel anytime</small>
+                <small>No credit card required • Free forever plan • Upgrade anytime</small>
               </p>
             </div>
           </div>

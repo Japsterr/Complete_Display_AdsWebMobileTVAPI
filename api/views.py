@@ -23,6 +23,43 @@ from .permissions import IsOwnerOrBusinessMember
 class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
+    
+    def create(self, request, *args, **kwargs):
+        print("=== REGISTRATION VIEW CALLED ===")
+        print(f"Request data: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = serializer.save()
+                
+                # Generate JWT tokens for immediate login
+                from rest_framework_simplejwt.tokens import RefreshToken
+                refresh = RefreshToken.for_user(user)
+                
+                return Response({
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                    'user': {
+                        'id': user.id,
+                        'email': user.email,
+                        'account_type': user.account_type,
+                        'plan': user.plan.name if user.plan else 'Free'
+                    },
+                    'message': 'Registration successful! Welcome to DisplayAds.'
+                }, status=status.HTTP_201_CREATED)
+                
+            except Exception as e:
+                print(f"Registration error: {str(e)}")
+                return Response({
+                    'error': f'Registration failed: {str(e)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            print(f"Serializer errors: {serializer.errors}")
+            return Response({
+                'error': 'Registration failed. Please check your input.',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -275,16 +312,29 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.account_type == 'business' and hasattr(user, 'owned_business'):
-            return Campaign.objects.filter(business=user.owned_business)
+            campaigns = Campaign.objects.filter(business=user.owned_business)
         else:
-            return Campaign.objects.filter(personal_user=user)
+            campaigns = Campaign.objects.filter(personal_user=user)
+        
+        # Update status for all campaigns before returning
+        for campaign in campaigns:
+            campaign.update_status()
+        
+        return campaigns
     
     def perform_create(self, serializer):
         user = self.request.user
         if user.account_type == 'business' and hasattr(user, 'owned_business'):
-            serializer.save(business=user.owned_business, created_by=user)
+            campaign = serializer.save(business=user.owned_business, created_by=user)
         else:
-            serializer.save(personal_user=user, created_by=user)
+            campaign = serializer.save(personal_user=user, created_by=user)
+        
+        # Update status after creation
+        campaign.update_status()
+        
+    def perform_update(self, serializer):
+        campaign = serializer.save()
+        # Status will be updated by the serializer's update method
 
 class MediaViewSet(viewsets.ModelViewSet):
     serializer_class = MediaSerializer

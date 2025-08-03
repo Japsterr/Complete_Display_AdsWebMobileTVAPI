@@ -30,7 +30,7 @@ html, body, #root {
 }
 
 body {
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
   overflow-x: hidden;
 }
 
@@ -38,7 +38,7 @@ body {
 .sidebar {
   width: var(--sidebar-width);
   height: 100vh;
-  background: #1a202c !important;
+  background: #1e293b !important;
   position: fixed;
   left: 0;
   top: 0;
@@ -52,14 +52,15 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: #f1f5f9;
 }
 
 .header-main {
   position: sticky;
   top: 0;
   z-index: 999;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  background-color: white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
 }
 
 /* Mobile Styles */

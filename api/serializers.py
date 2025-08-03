@@ -35,24 +35,87 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, min_length=6)
+    first_name = serializers.CharField(max_length=30, required=True)
+    last_name = serializers.CharField(max_length=30, required=True)
+    business_name = serializers.CharField(max_length=100, required=False)
+    
     class Meta:
         model = User
-        fields = ['email', 'password', 'account_type', 'plan']
+        fields = ['email', 'password', 'first_name', 'last_name', 'account_type', 'business_name']
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_password(self, value):
+        if len(value) < 6:
+            raise serializers.ValidationError("Password must be at least 6 characters long.")
+        return value
+
+    def validate(self, data):
+        if data.get('account_type') == 'business' and not data.get('business_name'):
+            raise serializers.ValidationError({
+                'business_name': 'Business name is required for business accounts.'
+            })
+        return data
 
     def create(self, validated_data):
-        with transaction.atomic():
-            account_type = validated_data.get('account_type', 'free')  # Default to free tier
-            user = User.objects.create_user(
-                email=validated_data['email'],
-                password=validated_data['password'],
-                account_type=account_type,
-                plan=validated_data.get('plan')
-            )
-            if account_type == 'business':
-                business = Business.objects.create(owner=user, name=f"{user.email}'s Business")
-                BusinessMember.objects.create(business=business, user=user, member_role='owner')
-            return user
+        try:
+            with transaction.atomic():
+                # Extract fields that aren't direct User model fields
+                first_name = validated_data.pop('first_name')
+                last_name = validated_data.pop('last_name')
+                business_name = validated_data.pop('business_name', '')
+                
+                # Get the default Free plan
+                try:
+                    free_plan = Plan.objects.get(plan_name='Free')
+                except Plan.DoesNotExist:
+                    # Create free plan if it doesn't exist
+                    free_plan = Plan.objects.create(
+                        plan_name='Free',
+                        price=0,
+                        max_campaigns=3,
+                        max_displays=5,
+                        max_images=10,
+                        max_videos=0,
+                        max_storage_gb=0.5,
+                        has_video_support=False
+                    )
+                
+                # Create user with free plan
+                user = User.objects.create_user(
+                    email=validated_data['email'],
+                    password=validated_data['password'],
+                    account_type=validated_data.get('account_type', 'personal'),
+                    plan=free_plan
+                )
+                
+                # Create user profile
+                UserProfile.objects.create(
+                    user=user,
+                    first_name=first_name,
+                    last_name=last_name
+                )
+                
+                # If business account, create business
+                if user.account_type == 'business':
+                    business = Business.objects.create(
+                        owner=user, 
+                        name=business_name or f"{first_name} {last_name}'s Business"
+                    )
+                    BusinessMember.objects.create(
+                        business=business, 
+                        user=user, 
+                        member_role='owner'
+                    )
+                
+                return user
+                
+        except Exception as e:
+            raise serializers.ValidationError(f"Registration failed: {str(e)}")
 
 class PlanSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,10 +138,25 @@ class BusinessMemberSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class CampaignSerializer(serializers.ModelSerializer):
+    media_count = serializers.ReadOnlyField()
+    total_duration = serializers.ReadOnlyField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
     class Meta:
         model = Campaign
-        fields = ['campaign_id', 'name', 'description', 'created_at']
-        read_only_fields = ['campaign_id', 'created_at']
+        fields = [
+            'campaign_id', 'name', 'description', 'status', 'status_display',
+            'start_date', 'end_date', 'created_at', 'updated_at',
+            'media_count', 'total_duration'
+        ]
+        read_only_fields = ['campaign_id', 'created_at', 'updated_at', 'media_count', 'total_duration']
+        
+    def update(self, instance, validated_data):
+        # Update the instance
+        instance = super().update(instance, validated_data) 
+        # Automatically update status after any changes
+        instance.update_status()
+        return instance
 
 class MediaSerializer(serializers.ModelSerializer):
     class Meta:

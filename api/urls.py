@@ -19,6 +19,7 @@ router.register(r'campaign-media', CampaignMediaViewSet)
 
 urlpatterns = [
     path('register/', UserRegistrationView.as_view(), name='register'),
+    path('auth/register/', UserRegistrationView.as_view(), name='auth_register'),  # Alternative endpoint
     path('login/', CustomLoginView.as_view(), name='login'),
     path('login-simple/', TokenObtainPairView.as_view(), name='login_simple'),  # Test this
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

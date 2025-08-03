@@ -1,7 +1,6 @@
 import React from "react";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ComputerDesktopIcon } from "@heroicons/react/24/outline";
 import api from "../services/api.ts";
 
 export default function RegisterPage() {
@@ -14,11 +13,14 @@ export default function RegisterPage() {
     businessName: "",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setLoading(true);
+    
     try {
       const payload = {
         email: form.email,
@@ -28,160 +30,247 @@ export default function RegisterPage() {
         account_type: form.accountType,
         ...(form.accountType === "business" && { business_name: form.businessName }),
       };
+      
+      console.log("Registration payload:", payload);
+      
       const res = await api.post("/auth/register/", payload);
-      localStorage.setItem("access_token", res.data.access);
-      localStorage.setItem("refresh_token", res.data.refresh);
-      navigate("/dashboard");
-    } catch (err) {
-      setError("Registration failed. Please check your details.");
+      
+      if (res.data.access && res.data.refresh) {
+        localStorage.setItem("access_token", res.data.access);
+        localStorage.setItem("refresh_token", res.data.refresh);
+        navigate("/dashboard");
+      } else {
+        setError("Registration completed but login failed. Please try signing in.");
+      }
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      
+      if (err.response?.data?.details) {
+        // Handle specific field errors
+        const details = err.response.data.details;
+        let errorMessage = "Please fix the following issues:\n";
+        
+        Object.keys(details).forEach(field => {
+          const fieldErrors = Array.isArray(details[field]) ? details[field] : [details[field]];
+          errorMessage += `• ${field}: ${fieldErrors.join(", ")}\n`;
+        });
+        
+        setError(errorMessage);
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.message) {
+        setError(`Network error: ${err.message}`);
+      } else {
+        setError("Registration failed. Please check your details and try again.");
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="flex justify-center">
-            <ComputerDesktopIcon className="h-12 w-12 text-indigo-600" />
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
-            Create your DisplayAds account
-          </h2>
-          <p className="mt-2 text-center text-sm text-slate-600">
-            Or{' '}
-            <Link
-              to="/login"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              sign in to your existing account
-            </Link>
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
-              Account Type
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {["personal", "business"].map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  className={`${
-                    form.accountType === type
-                      ? "bg-indigo-600 border-indigo-600 text-white"
-                      : "bg-white border-slate-300 text-slate-900"
-                  } relative border rounded-md py-2 px-3 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500`}
-                  onClick={() => setForm(f => ({ ...f, accountType: type }))}
-                >
-                  {type === "personal" ? "Personal" : "Business"}
-                </button>
-              ))}
-            </div>
-          </div>
+    <div className="min-vh-100 d-flex align-items-center" style={{background: 'var(--bg-primary)'}}>
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-md-6 col-lg-5">
+            <div className="card shadow-lg border-0" style={{borderRadius: 'var(--radius-xl)'}}>
+              <div className="card-body p-5">
+                {/* Header */}
+                <div className="text-center mb-4">
+                  <div className="mb-3">
+                    <div className="feature-icon mx-auto" style={{width: '80px', height: '80px'}}>
+                      📱
+                    </div>
+                  </div>
+                  <h2 className="fw-bold text-primary mb-3">
+                    Create Your DisplayAds Account
+                  </h2>
+                  <p className="text-secondary">
+                    Join the mobile-first digital signage revolution
+                  </p>
+                </div>
 
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="relative block w-full px-3 py-2 border border-slate-300 rounded-t-md placeholder-slate-500 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                className="relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-500 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-              />
-            </div>
-            <div>
-              <label htmlFor="firstName" className="sr-only">
-                First Name
-              </label>
-              <input
-                id="firstName"
-                name="firstName"
-                type="text"
-                autoComplete="given-name"
-                required
-                value={form.firstName}
-                onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
-                className="relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-500 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="First name"
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="sr-only">
-                Last Name
-              </label>
-              <input
-                id="lastName"
-                name="lastName"
-                type="text"
-                autoComplete="family-name"
-                required
-                value={form.lastName}
-                onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
-                className={`relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-500 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm ${
-                  form.accountType === "business" ? "" : "rounded-b-md"
-                }`}
-                placeholder="Last name"
-              />
-            </div>
-            {form.accountType === "business" && (
-              <div>
-                <label htmlFor="businessName" className="sr-only">
-                  Business Name
-                </label>
-                <input
-                  id="businessName"
-                  name="businessName"
-                  type="text"
-                  autoComplete="organization"
-                  required
-                  value={form.businessName}
-                  onChange={e => setForm(f => ({ ...f, businessName: e.target.value }))}
-                  className="relative block w-full px-3 py-2 border border-slate-300 rounded-b-md placeholder-slate-500 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  placeholder="Business name"
-                />
+                {/* Account Type Selection */}
+                <div className="mb-4">
+                  <label className="form-label fw-semibold">Account Type</label>
+                  <div className="row g-2">
+                    {["personal", "business"].map(type => (
+                      <div key={type} className="col-6">
+                        <button
+                          type="button"
+                          className={`btn w-100 ${
+                            form.accountType === type
+                              ? "btn-primary"
+                              : "btn-outline-secondary"
+                          }`}
+                          onClick={() => setForm(f => ({ ...f, accountType: type }))}
+                        >
+                          {type === "personal" ? "👤 Personal" : "🏢 Business"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Registration Form */}
+                <form onSubmit={handleSubmit}>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label htmlFor="firstName" className="form-label">
+                        First Name
+                      </label>
+                      <input
+                        id="firstName"
+                        name="firstName"
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter first name"
+                        autoComplete="given-name"
+                        required
+                        value={form.firstName}
+                        onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label htmlFor="lastName" className="form-label">
+                        Last Name
+                      </label>
+                      <input
+                        id="lastName"
+                        name="lastName"
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter last name"
+                        autoComplete="family-name"
+                        required
+                        value={form.lastName}
+                        onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="email" className="form-label">
+                      Email Address
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      className="form-control"
+                      placeholder="Enter your email"
+                      autoComplete="email"
+                      required
+                      value={form.email}
+                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="password" className="form-label">
+                      Password
+                    </label>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      className="form-control"
+                      placeholder="Create a secure password"
+                      autoComplete="new-password"
+                      required
+                      value={form.password}
+                      onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                    />
+                  </div>
+
+                  {form.accountType === "business" && (
+                    <div className="mb-3">
+                      <label htmlFor="businessName" className="form-label">
+                        Business Name
+                      </label>
+                      <input
+                        id="businessName"
+                        name="businessName"
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter your business name"
+                        autoComplete="organization"
+                        required
+                        value={form.businessName}
+                        onChange={e => setForm(f => ({ ...f, businessName: e.target.value }))}
+                      />
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="alert alert-danger d-flex align-items-center" role="alert">
+                      <div>
+                        <strong>Registration Failed:</strong> {error}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary w-100 py-3 fw-semibold"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Creating Account...
+                      </>
+                    ) : (
+                      <>
+                        🚀 Create Account
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {/* Sign In Link */}
+                <div className="text-center mt-4">
+                  <p className="text-secondary mb-0">
+                    Already have an account?{' '}
+                    <Link
+                      to="/login"
+                      className="text-primary fw-semibold text-decoration-none"
+                    >
+                      Sign in here
+                    </Link>
+                  </p>
+                </div>
+
+                {/* Features Preview */}
+                <div className="mt-4 pt-4 border-top">
+                  <div className="row text-center g-3">
+                    <div className="col-4">
+                      <div className="text-primary mb-1">📱</div>
+                      <small className="text-secondary">QR Activation</small>
+                    </div>
+                    <div className="col-4">
+                      <div className="text-primary mb-1">📊</div>
+                      <small className="text-secondary">Analytics</small>
+                    </div>
+                    <div className="col-4">
+                      <div className="text-primary mb-1">🌐</div>
+                      <small className="text-secondary">Multi-Platform</small>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
             </div>
-          )}
 
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Create Account
-            </button>
+            {/* Additional Info */}
+            <div className="text-center mt-4">
+              <p className="text-secondary mb-0">
+                <small>🔒 Your data is secure • 🆓 Free forever plan available • ❌ No credit card required</small>
+              </p>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

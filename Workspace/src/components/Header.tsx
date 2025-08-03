@@ -5,7 +5,7 @@ import {
   UserCircleIcon, 
   ArrowRightOnRectangleIcon,
   Bars3Icon,
-  MagnifyingGlassIcon
+  TvIcon
 } from "@heroicons/react/24/outline";
 import api from "../services/api";
 
@@ -53,60 +53,73 @@ export default function Header({ onMenuClick }: HeaderProps) {
     navigate("/login");
   }
 
+  function handleLogoClick() {
+    navigate("/dashboard");
+  }
+
   const displayName = user ? 
     (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.email) 
     : 'Loading...';
 
   return (
-    <header className="header-main bg-white border-bottom py-3">
+    <header className="header-main bg-primary py-3 shadow-sm">
       <div className="container-fluid">
         <div className="d-flex align-items-center justify-content-between">
-          {/* Mobile menu button */}
-          <div className="d-md-none">
+          {/* Left: Mobile menu + Logo */}
+          <div className="d-flex align-items-center">
+            {/* Mobile menu button */}
+            <div className="d-md-none me-3">
+              <button
+                type="button"
+                className="btn btn-outline-light btn-sm"
+                onClick={onMenuClick}
+              >
+                <Bars3Icon style={{ width: "20px", height: "20px" }} />
+              </button>
+            </div>
+
+            {/* Logo/Brand */}
             <button
               type="button"
-              className="btn btn-outline-secondary btn-sm"
-              onClick={onMenuClick}
+              className="btn btn-link text-decoration-none p-0 d-flex align-items-center"
+              onClick={handleLogoClick}
             >
-              <Bars3Icon style={{ width: "20px", height: "20px" }} />
+              <div className="d-flex align-items-center">
+                <div className="bg-white rounded-circle p-2 me-3 shadow-sm">
+                  <TvIcon style={{ width: "24px", height: "24px" }} className="text-primary" />
+                </div>
+                <div className="text-white">
+                  <div className="fw-bold" style={{ fontSize: "1.25rem", lineHeight: "1.2" }}>
+                    Digital Signage
+                  </div>
+                  <div style={{ fontSize: "0.75rem", opacity: "0.9" }}>
+                    Platform
+                  </div>
+                </div>
+              </div>
             </button>
           </div>
 
-          {/* Search */}
-          <div className="flex-grow-1 d-flex justify-content-center px-2">
-            <div className="position-relative" style={{ maxWidth: "400px", width: "100%" }}>
-              <div className="position-absolute top-50 start-0 translate-middle-y ps-3">
-                <MagnifyingGlassIcon style={{ width: "16px", height: "16px" }} className="text-muted" />
-              </div>
-              <input
-                type="search"
-                className="form-control ps-5"
-                placeholder="Search..."
-                style={{ paddingLeft: "2.5rem" }}
-              />
-            </div>
-          </div>
-
-          {/* Profile dropdown */}
+          {/* Right: Profile dropdown */}
           <div className="ms-3">
             <div className="dropdown">
               <button
                 type="button"
-                className="btn btn-link text-decoration-none d-flex align-items-center"
+                className="btn btn-outline-light text-decoration-none d-flex align-items-center px-3 py-2"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
-                <UserCircleIcon style={{ width: "32px", height: "32px" }} className="text-muted me-2" />
+                <UserCircleIcon style={{ width: "32px", height: "32px" }} className="text-white me-2" />
                 <div className="d-none d-md-block text-start me-2">
-                  <div className="fw-medium text-dark" style={{ fontSize: "0.875rem" }}>
+                  <div className="fw-medium text-white" style={{ fontSize: "0.875rem" }}>
                     {displayName}
                   </div>
                   {user && (
-                    <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                    <div className="text-white-50" style={{ fontSize: "0.75rem" }}>
                       {user.email}
                     </div>
                   )}
                 </div>
-                <ChevronDownIcon style={{ width: "16px", height: "16px" }} className="text-muted" />
+                <ChevronDownIcon style={{ width: "16px", height: "16px" }} className="text-white" />
               </button>
               {userMenuOpen && (
                 <div className="dropdown-menu dropdown-menu-end show position-absolute" style={{ zIndex: 1050 }}>

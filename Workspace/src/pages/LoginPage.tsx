@@ -29,28 +29,40 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+    <div className="min-vh-100 d-flex align-items-center" style={{background: 'var(--bg-primary)'}}>
       <div className="container">
         <div className="row justify-content-center">
-          <div className="col-md-6 col-lg-4">
-            <div className="card shadow-sm border-0">
-              <div className="card-body p-4">
+          <div className="col-md-6 col-lg-5">
+            <div className="card shadow-lg border-0" style={{borderRadius: 'var(--radius-xl)'}}>
+              <div className="card-body p-5">
+                {/* Header */}
                 <div className="text-center mb-4">
-                  <i className="bi bi-display text-primary mb-3" style={{fontSize: '3rem'}}></i>
-                  <h1 className="h3 fw-bold">Sign in to DisplayAds</h1>
-                  <p className="text-muted">Enter your credentials to access your account</p>
+                  <div className="mb-3">
+                    <div className="feature-icon mx-auto" style={{width: '80px', height: '80px'}}>
+                      📱
+                    </div>
+                  </div>
+                  <h2 className="fw-bold text-primary mb-3">
+                    Welcome Back to DisplayAds
+                  </h2>
+                  <p className="text-secondary">
+                    Sign in to manage your digital signage campaigns
+                  </p>
                 </div>
 
                 {error && (
-                  <div className="alert alert-danger" role="alert">
-                    <i className="bi bi-exclamation-triangle me-2"></i>
-                    {error}
+                  <div className="alert alert-danger d-flex align-items-center" role="alert">
+                    <div>
+                      <strong>Sign In Failed:</strong> {error}
+                    </div>
                   </div>
                 )}
 
                 <form onSubmit={handleSubmit}>
                   <div className="mb-3">
-                    <label htmlFor="email" className="form-label">Email address</label>
+                    <label htmlFor="email" className="form-label">
+                      Email Address
+                    </label>
                     <input
                       id="email"
                       name="email"
@@ -58,13 +70,16 @@ export default function LoginPage() {
                       required
                       className="form-control"
                       placeholder="Enter your email"
+                      autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
 
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label">Password</label>
+                  <div className="mb-4">
+                    <label htmlFor="password" className="form-label">
+                      Password
+                    </label>
                     <input
                       id="password"
                       name="password"
@@ -72,38 +87,68 @@ export default function LoginPage() {
                       required
                       className="form-control"
                       placeholder="Enter your password"
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
 
-                  <div className="d-grid">
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                          Signing in...
-                        </>
-                      ) : (
-                        'Sign in'
-                      )}
-                    </button>
-                  </div>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary w-100 py-3 fw-semibold"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        🚀 Sign In
+                      </>
+                    )}
+                  </button>
                 </form>
 
+                {/* Sign Up Link */}
                 <div className="text-center mt-4">
-                  <p className="text-muted">
+                  <p className="text-secondary mb-0">
                     Don't have an account?{' '}
-                    <Link to="/register" className="text-decoration-none">
-                      Sign up here
+                    <Link
+                      to="/register"
+                      className="text-primary fw-semibold text-decoration-none"
+                    >
+                      Create account here
                     </Link>
                   </p>
                 </div>
+
+                {/* Quick Features */}
+                <div className="mt-4 pt-4 border-top">
+                  <div className="row text-center g-3">
+                    <div className="col-4">
+                      <div className="text-primary mb-1">📱</div>
+                      <small className="text-secondary">QR Activation</small>
+                    </div>
+                    <div className="col-4">
+                      <div className="text-primary mb-1">📊</div>
+                      <small className="text-secondary">Real-time Analytics</small>
+                    </div>
+                    <div className="col-4">
+                      <div className="text-primary mb-1">🌐</div>
+                      <small className="text-secondary">Cloud Dashboard</small>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Security Info */}
+            <div className="text-center mt-4">
+              <p className="text-secondary mb-0">
+                <small>🔒 Secure login • 🌍 Access from anywhere • 📱 Mobile optimized</small>
+              </p>
             </div>
           </div>
         </div>

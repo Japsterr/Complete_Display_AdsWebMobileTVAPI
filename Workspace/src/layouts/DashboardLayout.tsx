@@ -13,7 +13,7 @@ export default function DashboardLayout() {
       <Sidebar />
       <div className="flex-grow-1 dashboard-content">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="container-fluid py-4">
+        <main className="container-fluid py-4" style={{ backgroundColor: '#f1f5f9' }}>
           <Outlet />
         </main>
       </div>

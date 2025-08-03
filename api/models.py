@@ -40,14 +40,12 @@ class Plan(models.Model):
 
 class User(AbstractBaseUser, PermissionsMixin):
     ACCOUNT_TYPE_CHOICES = [
-        ('free', 'Free'),
-        ('starter', 'Starter'),
-        ('professional', 'Professional'),
-        ('enterprise', 'Enterprise'),
+        ('personal', 'Personal'),
+        ('business', 'Business'),
     ]
     # Use default 'id' field (AutoField primary key) for compatibility with Django and JWT
     email = models.EmailField(unique=True)
-    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES, default='free')
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES, default='personal')
     plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -141,13 +139,26 @@ class BusinessMember(models.Model):
 
 # --- Resource Models ---
 class Campaign(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('ready', 'Ready'),
+        ('active', 'Active'),
+        ('paused', 'Paused'),
+        ('scheduled', 'Scheduled'),
+        ('expired', 'Expired'),
+    ]
+    
     campaign_id = models.AutoField(primary_key=True)
     personal_user = models.ForeignKey('User', null=True, blank=True, on_delete=models.CASCADE, related_name='personal_campaigns')
     business = models.ForeignKey('Business', null=True, blank=True, on_delete=models.CASCADE, related_name='business_campaigns')
     created_by = models.ForeignKey('User', on_delete=models.CASCADE, related_name='created_campaigns')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'Campaigns'
@@ -161,8 +172,53 @@ class Campaign(models.Model):
             )
         ]
 
+    def update_status(self):
+        """Automatically update campaign status based on content and scheduling"""
+        from django.utils import timezone
+        now = timezone.now()
+        
+        # Check if campaign has media
+        has_media = self.campaign_media.exists()
+        
+        if not has_media:
+            self.status = 'draft'
+        elif self.end_date and now > self.end_date:
+            self.status = 'expired'
+        elif self.start_date and now < self.start_date:
+            self.status = 'scheduled'
+        elif self.start_date and now >= self.start_date and (not self.end_date or now <= self.end_date):
+            # Check if campaign is assigned to any displays
+            is_assigned = (
+                self.default_for_displays.exists() or 
+                self.schedules.filter(start_datetime__lte=now, end_datetime__gte=now).exists()
+            )
+            if is_assigned:
+                self.status = 'active'
+            else:
+                self.status = 'ready'
+        elif has_media and not self.start_date:
+            # No scheduling, just has media
+            is_assigned = self.default_for_displays.exists()
+            if is_assigned:
+                self.status = 'active'
+            else:
+                self.status = 'ready'
+        else:
+            self.status = 'ready'
+        
+        self.save(update_fields=['status'])
+        return self.status
+
+    @property
+    def media_count(self):
+        return self.campaign_media.count()
+        
+    @property
+    def total_duration(self):
+        return sum(cm.display_duration_seconds for cm in self.campaign_media.all())
+
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.get_status_display()})"
 
 class Media(models.Model):
     MEDIA_TYPE_CHOICES = [
@@ -208,6 +264,17 @@ class CampaignMedia(models.Model):
 
     def __str__(self):
         return f"{self.campaign} - {self.media} (Order: {self.order})"
+        
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Update campaign status when media is added
+        self.campaign.update_status()
+        
+    def delete(self, *args, **kwargs):
+        campaign = self.campaign
+        super().delete(*args, **kwargs)
+        # Update campaign status when media is removed
+        campaign.update_status()
 
 class Display(models.Model):
     ACTIVATION_STATUS_CHOICES = [

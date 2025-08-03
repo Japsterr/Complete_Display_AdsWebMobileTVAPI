@@ -4,8 +4,9 @@ import {
   PhotoIcon,
   MegaphoneIcon,
   ComputerDesktopIcon,
-  EyeIcon,
+  ClockIcon,
   PlusIcon,
+  TvIcon,
 } from "@heroicons/react/24/outline";
 import api from "../services/api";
 import UploadModal from "../components/UploadModal";
@@ -15,7 +16,10 @@ interface DashboardData {
     total_campaigns: number;
     total_media: number;
     total_displays: number;
-    total_views: number;
+    top_display: {
+      name: string;
+      screen_time: number;
+    } | null;
   };
   recent_activity: Array<{
     id: number;
@@ -36,19 +40,44 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      // Try to get actual data, fallback to fake data if endpoints don't exist
-      const [displaysRes, campaignsRes, mediaRes] = await Promise.all([
+      // Fetch real data from APIs
+      const [displaysRes, campaignsRes, mediaRes, analyticsRes] = await Promise.all([
         api.get('/displays/').catch(() => ({ data: [] })),
         api.get('/campaigns/').catch(() => ({ data: [] })),
         api.get('/media/').catch(() => ({ data: [] })),
+        api.get('/analytics/dashboard/').catch(() => ({ data: { recent_impressions: [] } }))
       ]);
+
+      // Calculate top display with most screen time
+      let topDisplay = null;
+      if (analyticsRes.data.recent_impressions?.length > 0) {
+        const displayStats = new Map();
+        
+        analyticsRes.data.recent_impressions.forEach((impression: any) => {
+          const displayName = impression.display;
+          if (!displayStats.has(displayName)) {
+            displayStats.set(displayName, 0);
+          }
+          displayStats.set(displayName, displayStats.get(displayName) + impression.duration);
+        });
+
+        if (displayStats.size > 0) {
+          const topEntry = Array.from(displayStats.entries())
+            .sort((a, b) => b[1] - a[1])[0];
+          
+          topDisplay = {
+            name: topEntry[0],
+            screen_time: topEntry[1]
+          };
+        }
+      }
 
       setDashboardData({
         stats: {
           total_campaigns: campaignsRes.data.length,
           total_media: mediaRes.data.length,
           total_displays: displaysRes.data.length,
-          total_views: Math.floor(Math.random() * 50000),
+          top_display: topDisplay,
         },
         recent_activity: [
           {
@@ -72,7 +101,7 @@ export default function DashboardPage() {
           total_campaigns: 0,
           total_media: 0,
           total_displays: 0,
-          total_views: 0,
+          top_display: null,
         },
         recent_activity: [],
       });
@@ -90,6 +119,19 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
 
   const stats = [
     {
@@ -111,10 +153,16 @@ export default function DashboardPage() {
       color: "info",
     },
     {
-      name: "Total Views",
-      value: dashboardData?.stats.total_views || 0,
-      icon: EyeIcon,
+      name: dashboardData?.stats.top_display ? "Top Display" : "No Activity",
+      value: dashboardData?.stats.top_display 
+        ? `${dashboardData.stats.top_display.name}` 
+        : "N/A",
+      subtitle: dashboardData?.stats.top_display 
+        ? formatDuration(dashboardData.stats.top_display.screen_time)
+        : "No screen time recorded",
+      icon: TvIcon,
       color: "warning",
+      isText: true,
     },
   ];
 
@@ -146,9 +194,21 @@ export default function DashboardPage() {
                         style={{ width: "24px", height: "24px" }}
                       />
                     </div>
-                    <div>
-                      <h3 className="h4 mb-0">{stat.value}</h3>
-                      <p className="text-muted mb-0 small">{stat.name}</p>
+                    <div className="flex-grow-1">
+                      {stat.isText ? (
+                        <>
+                          <h6 className="fw-bold mb-1 text-truncate" style={{ fontSize: "0.9rem" }}>
+                            {stat.value}
+                          </h6>
+                          <p className="text-muted mb-0 small">{stat.name}</p>
+                          <small className="text-success">{stat.subtitle}</small>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="h4 mb-0">{stat.value}</h3>
+                          <p className="text-muted mb-0 small">{stat.name}</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
