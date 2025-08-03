@@ -1,66 +1,69 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# DisplayAds Mobile Manager
 
-# Getting Started
+React Native mobile application for managing digital signage campaigns, media, and displays.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 📱 Features
 
-## Step 1: Start Metro
+### Complete Dashboard Integration
+- **Real-time Statistics** - Campaign, media, and display counts
+- **Campaign Management** - View campaigns with status badges
+- **Media Library** - Browse uploaded files with metadata
+- **Display Monitoring** - Check device online/offline status
+- **Analytics Dashboard** - Performance metrics and insights
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### Authentication & Security
+- **JWT Token Authentication** - Secure login with Django backend
+- **Persistent Sessions** - AsyncStorage for token persistence
+- **Network Detection** - Automatic API endpoint testing
+- **Secure Logout** - Complete token cleanup
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### Professional UI/UX
+- **Blue/Purple Branding** - Consistent with web platform
+- **Material Design** - Clean, modern interface
+- **Status Badges** - Visual campaign and display indicators
+- **Pull-to-Refresh** - Live data synchronization
+- **Loading States** - Professional user feedback
 
-```sh
-# Using npm
-npm start
+## 🏗️ Technical Stack
 
-# OR using Yarn
-yarn start
+- **React Native**: 0.75.4
+- **TypeScript**: Full type safety
+- **AsyncStorage**: Token persistence
+- **Axios**: HTTP client for API calls
+- **Android SDK**: Native Android features
+
+## 🚀 Installation
+
+### Prerequisites
+- Node.js 22.14.0+
+- Android Studio with SDK
+- Android device or emulator
+
+### Build & Install
+```bash
+cd MobileClient/DisplayAdsManager/DisplayAdsNative
+npm install
+npm install @react-native-async-storage/async-storage
+.\android\gradlew.bat -p android assembleRelease
+
+# Install on device
+adb install android/app/build/outputs/apk/release/app-release.apk
 ```
 
-## Step 2: Build and run your app
+## 🔐 Authentication
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### Login Credentials
+- **Email**: Your Django user email
+- **Password**: Your Django user password
+- **API Endpoint**: Auto-detected (192.168.3.73:8000)
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+### API Integration
+- **Base URL**: `http://192.168.3.73:8000/api/v1`
+- **Health Check**: `/health/`
+- **Login**: `/login/`
+- **Campaigns**: `/campaigns/`
+- **Media**: `/media/`
+- **Displays**: `/displays/`
 
 ## Step 3: Modify your app
 

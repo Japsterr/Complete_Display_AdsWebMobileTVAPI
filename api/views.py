@@ -20,6 +20,18 @@ from .serializers import (
 )
 from .permissions import IsOwnerOrBusinessMember
 
+# Health check endpoint for mobile app
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """Simple health check endpoint for mobile app connectivity testing"""
+    return Response({
+        'status': 'healthy',
+        'message': 'DisplayAds API is running',
+        'timestamp': timezone.now(),
+        'version': '1.0.0'
+    })
+
 class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]

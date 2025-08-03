@@ -5,7 +5,7 @@ from .views import (
     TeamInviteView, AndroidTVDisplayView, LogoutView, UserProfileViewSet, user_profile,
     CustomLoginView, CampaignMediaViewSet, request_activation_code, activate_device, 
     check_activation_status, get_device_campaign, tv_simulator_view,
-    device_heartbeat, record_media_impression, analytics_dashboard
+    device_heartbeat, record_media_impression, analytics_dashboard, health_check
 )
 from .stripe_views import CreateCheckoutSessionView, get_stripe_config, stripe_webhook
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
@@ -18,6 +18,9 @@ router.register(r'userprofiles', UserProfileViewSet)
 router.register(r'campaign-media', CampaignMediaViewSet)
 
 urlpatterns = [
+    # Health check for mobile app
+    path('health/', health_check, name='health-check'),
+    
     path('register/', UserRegistrationView.as_view(), name='register'),
     path('auth/register/', UserRegistrationView.as_view(), name='auth_register'),  # Alternative endpoint
     path('login/', CustomLoginView.as_view(), name='login'),
