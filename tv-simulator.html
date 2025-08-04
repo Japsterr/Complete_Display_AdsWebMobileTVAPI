@@ -170,8 +170,8 @@
     </div>
 
     <script>
-        const API_BASE = 'http://127.0.0.1:8000/api/v1';
-        const DEVICE_ID = 'TEST-TV-001';
+    const API_BASE = 'http://127.0.0.1:8000/api/v1';
+    const DEVICE_ID = 'TV-TEST-001';
         
         let currentState = 'LOADING';
         let campaign = null;
@@ -453,10 +453,8 @@
         async function initialize() {
             try {
                 console.log('Initializing TV app...');
-                
-                // Check if already activated
+                // Always check activation and campaign status on load
                 const status = await checkActivationStatus();
-                
                 if (status.activated) {
                     console.log('Device already activated');
                     await loadCampaign();
@@ -465,19 +463,21 @@
                     showScreen('activation');
                     startPollingActivation();
                 }
-                
             } catch (error) {
                 console.error('Initialization error:', error);
                 showScreen('activation');
                 startPollingActivation();
             }
         }
-        
-        // Start the app
+
+        // Start the app and poll for campaign updates every 10 seconds
         setTimeout(() => {
             initialize();
+            setInterval(() => {
+                loadCampaign();
+            }, 300000); // Poll every 5 minutes for campaign/media updates
         }, 2000); // Show loading for 2 seconds
-        
+
         // Manual testing buttons (remove in production)
         document.addEventListener('keydown', (e) => {
             if (e.key === '1') showScreen('loading');
@@ -485,7 +485,7 @@
             if (e.key === '3') initialize();
             if (e.key === '4') loadCampaign();
         });
-        
+
         console.log('Digital Signage TV Simulator loaded. Press 1-4 for manual testing.');
     </script>
 </body>

@@ -56,7 +56,7 @@ class UserRegistrationView(generics.CreateAPIView):
                         'id': user.id,
                         'email': user.email,
                         'account_type': user.account_type,
-                        'plan': user.plan.name if user.plan else 'Free'
+                            'plan': user.plan.plan_name if user.plan else 'Free'
                     },
                     'message': 'Registration successful! Welcome to DisplayAds.'
                 }, status=status.HTTP_201_CREATED)

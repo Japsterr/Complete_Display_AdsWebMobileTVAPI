@@ -145,7 +145,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = [
-            'campaign_id', 'name', 'description', 'status', 'status_display',
+            'campaign_id', 'name', 'description', 'screen_orientation', 'status', 'status_display',
             'start_date', 'end_date', 'created_at', 'updated_at',
             'media_count', 'total_duration'
         ]

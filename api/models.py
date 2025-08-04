@@ -154,6 +154,7 @@ class Campaign(models.Model):
     created_by = models.ForeignKey('User', on_delete=models.CASCADE, related_name='created_campaigns')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    screen_orientation = models.CharField(max_length=10, choices=[('portrait', 'Portrait'), ('landscape', 'Landscape')], default='portrait', help_text='Orientation for all media in this campaign')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
