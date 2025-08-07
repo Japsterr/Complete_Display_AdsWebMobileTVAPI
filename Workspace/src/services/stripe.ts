@@ -1,4 +1,3 @@
-import { loadStripe } from '@stripe/stripe-js';
 import api from './api';
 
 export interface PlanFeatures {

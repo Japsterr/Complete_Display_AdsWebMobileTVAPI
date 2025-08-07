@@ -1,0 +1,55 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: displayads
+      POSTGRES_USER: displayadsuser
+      POSTGRES_PASSWORD: displayadspass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build: .
+    command: gunicorn signage_project.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - media_data:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      - DJANGO_DB_HOST=postgres
+      - DJANGO_DB_NAME=displayads
+      - DJANGO_DB_USER=displayadsuser
+      - DJANGO_DB_PASSWORD=displayadspass
+
+  frontend:
+    build: ./Workspace
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    restart: always
+
+volumes:
+  postgres_data:
+  media_data:
+  minio_data:

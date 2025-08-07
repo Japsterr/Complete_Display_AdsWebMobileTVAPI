@@ -159,10 +159,25 @@ class CampaignSerializer(serializers.ModelSerializer):
         return instance
 
 class MediaSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Media
-        fields = ['media_id', 'name', 'description', 'file', 'uploaded_at']
+        fields = ['media_id', 'name', 'description', 'file', 'file_url', 'uploaded_at']
         read_only_fields = ['media_id', 'uploaded_at']
+
+    def get_file_url(self, obj):
+        # Always return the public MinIO URL for the file (for frontend)
+        if obj.file and hasattr(obj.file, 'url'):
+            # If the url is already absolute, return as is
+            if obj.file.url.startswith('http://') or obj.file.url.startswith('https://'):
+                return obj.file.url
+            # Otherwise, construct the public MinIO URL
+            endpoint = 'http://localhost:9000'
+            bucket = 'media'
+            file_path = obj.file.name.lstrip('/')
+            return f"{endpoint}/{bucket}/{file_path}"
+        return ''
 
 class CampaignMediaSerializer(serializers.ModelSerializer):
     class Meta:

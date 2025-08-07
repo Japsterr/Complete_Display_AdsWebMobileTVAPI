@@ -111,7 +111,7 @@ export default function MediaLibraryPage() {
               <div className="card h-100">
                 <div className="position-relative" style={{ paddingBottom: "56.25%" }}>
                   <img 
-                    src={item.file || item.thumbnail_url || item.file_url || item.url || '/placeholder-image.png'} 
+                    src={item.file_url || item.file || item.thumbnail_url || item.url || '/placeholder-image.png'} 
                     alt={item.name || item.file_name} 
                     className="card-img-top position-absolute w-100 h-100"
                     style={{ objectFit: 'cover' }}
@@ -194,7 +194,7 @@ export default function MediaLibraryPage() {
               </div>
               <div className="modal-body text-center">
                 <img 
-                  src={previewMedia.file} 
+                  src={previewMedia.file_url || previewMedia.file || previewMedia.thumbnail_url || previewMedia.url || '/placeholder-image.png'} 
                   alt={previewMedia.name}
                   className="img-fluid"
                   style={{ maxHeight: '70vh' }}

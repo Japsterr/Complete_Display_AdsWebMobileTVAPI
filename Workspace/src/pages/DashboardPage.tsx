@@ -4,7 +4,6 @@ import {
   PhotoIcon,
   MegaphoneIcon,
   ComputerDesktopIcon,
-  ClockIcon,
   PlusIcon,
   TvIcon,
 } from "@heroicons/react/24/outline";

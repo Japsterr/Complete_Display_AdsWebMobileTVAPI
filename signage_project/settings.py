@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'api',
     'drf_yasg',
+        'storages',
 ]
 
 # Custom user model
@@ -87,7 +89,6 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# CORS methods
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -96,6 +97,9 @@ CORS_ALLOW_METHODS = [
     'POST',
     'PUT',
 ]
+
+# Static files (for Docker)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # REST framework configuration
 REST_FRAMEWORK = {
@@ -142,8 +146,12 @@ WSGI_APPLICATION = 'signage_project.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DJANGO_DB_NAME', 'displayads'),
+        'USER': os.environ.get('DJANGO_DB_USER', 'displayadsuser'),
+        'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', 'displayadspass'),
+        'HOST': os.environ.get('DJANGO_DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DJANGO_DB_PORT', '5432'),
     }
 }
 
@@ -187,6 +195,23 @@ STATIC_URL = 'static/'
 # Media files (User uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# --- MinIO / S3 Media Storage ---
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ROOT_USER', 'minioadmin')
+AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_ROOT_PASSWORD', 'minioadmin')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'media')
+# Use Docker service name for backend connection
+AWS_S3_ENDPOINT_URL = os.environ.get('MINIO_ENDPOINT_URL', 'http://minio:9000')
+AWS_S3_REGION_NAME = os.environ.get('MINIO_REGION_NAME', 'us-east-1')
+AWS_S3_USE_SSL = False
+AWS_S3_VERIFY = False
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = None
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
