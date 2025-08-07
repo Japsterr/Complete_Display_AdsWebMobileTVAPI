@@ -9,39 +9,8 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    setError(null);
-    if (email && password) {
-      try {
-        const response = await fetch(
-          'https://api.keygen.sh/v1/accounts/mrjc-co-za/users/actions/authenticate',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/vnd.api+json',
-              'Accept': 'application/vnd.api+json',
-            },
-            body: JSON.stringify({
-              data: {
-                type: 'users',
-                attributes: { email, password },
-              },
-            }),
-          }
-        );
-        const result = await response.json();
-        if (response.ok && result.data && result.data.attributes && result.data.attributes.token) {
-          // Save token in localStorage for future API requests
-          localStorage.setItem('keygen_token', result.data.attributes.token);
-          navigate('/dashboard');
-        } else {
-          setError(result.errors?.[0]?.detail || 'Invalid credentials');
-        }
-      } catch (error) {
-        setError('Network error: ' + String(error));
-      }
-    } else {
-      setError('Please enter email and password');
-    }
+  // TEMP: Bypass authentication for dashboard preview
+  navigate('/dashboard');
   };
 
   return (
