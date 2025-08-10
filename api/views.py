@@ -1125,12 +1125,6 @@ def analytics_campaign_breakdown(request):
         start, end = end, start
 
     qs = MediaImpression.objects.filter(display__in=displays, started_at__gte=start, started_at__lte=end)
-    try:
-        print("=== ANALYTICS CAMPAIGN BREAKDOWN DEBUG ===")
-        print(f"User: {user.email} | Displays: {list(displays.values_list('display_id', flat=True))}")
-        print(f"Window: {start.isoformat()} -> {end.isoformat()} | Impressions count: {qs.count()}")
-    except Exception:
-        pass
     agg = qs.values('campaign__campaign_id', 'campaign__name').annotate(
         total_impressions=models.Count('id'),
         total_duration=models.Sum('duration_shown'),
