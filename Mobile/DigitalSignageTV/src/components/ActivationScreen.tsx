@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, TextInput, Alert } from 'react-native';
+import ConfigService from '../services/ConfigService';
 import DeviceActivationService from '../services/DeviceActivationService';
 
 type Props = {
@@ -12,6 +13,8 @@ export default function ActivationScreen({ onActivated }: Props) {
 	const [qrB64, setQrB64] = useState<string | null>(null);
 	const [loading, setLoading] = useState<boolean>(false);
 	const stopPollingRef = useRef<null | (() => void)>(null);
+	const [showBaseModal, setShowBaseModal] = useState(false);
+	const [baseUrl, setBaseUrl] = useState('');
 
 	const requestCode = async () => {
 		setLoading(true);
@@ -72,6 +75,38 @@ export default function ActivationScreen({ onActivated }: Props) {
 			<TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={requestCode} disabled={loading}>
 				<Text style={styles.buttonText}>{loading ? 'Requesting…' : 'Get New Code'}</Text>
 			</TouchableOpacity>
+			<TouchableOpacity style={[styles.linkButton]} onPress={async () => {
+					const current = await ConfigService.getApiBase();
+					setBaseUrl(current);
+					setShowBaseModal(true);
+				}}>
+					<Text style={styles.linkText}>Change Server URL</Text>
+				</TouchableOpacity>
+
+				<Modal visible={showBaseModal} transparent animationType="fade" onRequestClose={() => setShowBaseModal(false)}>
+					<View style={styles.modalBackdrop}>
+						<View style={styles.modalCard}>
+							<Text style={styles.modalTitle}>Server Base URL</Text>
+							<TextInput value={baseUrl} onChangeText={setBaseUrl} placeholder="http://<ip>:8000/api/v1" style={styles.input} />
+							<View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 }}>
+								<TouchableOpacity style={[styles.smallBtn, { marginRight: 8 }]} onPress={() => setShowBaseModal(false)}>
+									<Text>Cancel</Text>
+								</TouchableOpacity>
+								<TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#ff8a3d' }]} onPress={async () => {
+									try {
+										await ConfigService.setApiBase(baseUrl);
+										setShowBaseModal(false);
+										Alert.alert('Saved', 'Server URL updated. New activations will use this.');
+									} catch (e) {
+										Alert.alert('Error', 'Could not save URL');
+									}
+								}}>
+									<Text style={{ color: '#000', fontWeight: '700' }}>Save</Text>
+								</TouchableOpacity>
+							</View>
+						</View>
+					</View>
+				</Modal>
 		</View>
 	);
 }
@@ -88,5 +123,12 @@ const styles = StyleSheet.create({
 	button: { backgroundColor: '#ff8a3d', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
 	buttonDisabled: { opacity: 0.6 },
 	buttonText: { color: '#000', fontSize: 18, fontWeight: '700' },
+	linkButton: { marginTop: 12 },
+	linkText: { color: '#8ab4ff', fontSize: 14 },
+	modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+	modalCard: { backgroundColor: '#fff', padding: 16, borderRadius: 8, width: 400 },
+	modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+	input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 8 },
+	smallBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: '#eee' },
 });
 

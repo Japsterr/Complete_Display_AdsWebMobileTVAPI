@@ -1,15 +1,35 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import api from "../services/api.ts";
 
 export default function CampaignEditor() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", description: "" });
+  const { id } = useParams<{ id: string }>();
+  const isEdit = !!id;
+  const [form, setForm] = useState({ name: "", description: "", screen_orientation: "portrait", normalize_to_orientation: "none" });
   const [playlist, setPlaylist] = useState<any[]>([]);
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!isEdit) return;
+    (async () => {
+      try {
+        const res = await api.get(`/campaigns/${id}/`);
+        const c = res.data;
+        setForm({
+          name: c.name || "",
+          description: c.description || "",
+          screen_orientation: c.screen_orientation || "portrait",
+          normalize_to_orientation: c.normalize_to_orientation || "none",
+        });
+      } catch (e: any) {
+        setError(e?.response?.data?.detail || "Failed to load campaign");
+      }
+    })();
+  }, [id, isEdit]);
 
   async function handleSave() {
     if (!form.name.trim()) {
@@ -21,16 +41,27 @@ export default function CampaignEditor() {
     setError("");
     
     try {
-      const response = await api.post("/campaigns/", {
-        name: form.name,
-        description: form.description || "",
-      });
-      
-      console.log("Campaign created successfully:", response.data);
-      navigate("/dashboard?section=campaigns");
+      if (isEdit) {
+        const response = await api.patch(`/campaigns/${id}/`, {
+          name: form.name,
+          description: form.description || "",
+          screen_orientation: form.screen_orientation,
+          normalize_to_orientation: form.normalize_to_orientation,
+        });
+        console.log("Campaign updated successfully:", response.data);
+      } else {
+        const response = await api.post("/campaigns/", {
+          name: form.name,
+          description: form.description || "",
+          screen_orientation: form.screen_orientation,
+          normalize_to_orientation: form.normalize_to_orientation,
+        });
+        console.log("Campaign created successfully:", response.data);
+      }
+      navigate("/campaigns");
     } catch (err: any) {
       console.error("Failed to create campaign:", err);
-      setError(err.response?.data?.detail || "Failed to create campaign");
+      setError(err.response?.data?.detail || (isEdit ? "Failed to update campaign" : "Failed to create campaign"));
     } finally {
       setLoading(false);
     }
@@ -55,13 +86,13 @@ export default function CampaignEditor() {
   return (
     <div className="container-fluid">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h2 mb-0">Create New Campaign</h1>
+        <h1 className="h2 mb-0">{isEdit ? "Edit Campaign" : "Create New Campaign"}</h1>
         <button
           className="btn btn-primary"
           onClick={handleSave}
           disabled={loading}
         >
-          {loading ? "Saving..." : "Save Campaign"}
+          {loading ? "Saving..." : isEdit ? "Save Changes" : "Save Campaign"}
         </button>
       </div>
       
@@ -98,6 +129,37 @@ export default function CampaignEditor() {
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="Enter campaign description"
                 />
+              </div>
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="mb-3">
+                    <label className="form-label">Screen Orientation</label>
+                    <select
+                      className="form-select"
+                      value={form.screen_orientation}
+                      onChange={e => setForm(f => ({ ...f, screen_orientation: e.target.value as any }))}
+                    >
+                      <option value="portrait">Portrait</option>
+                      <option value="landscape">Landscape</option>
+                    </select>
+                    <small className="text-muted">Orientation intended for the media in this campaign.</small>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="mb-3">
+                    <label className="form-label">Normalize To Orientation</label>
+                    <select
+                      className="form-select"
+                      value={form.normalize_to_orientation}
+                      onChange={e => setForm(f => ({ ...f, normalize_to_orientation: e.target.value as any }))}
+                    >
+                      <option value="none">None</option>
+                      <option value="portrait">Portrait</option>
+                      <option value="landscape">Landscape</option>
+                    </select>
+                    <small className="text-muted">Playback hint for TV app to letterbox/pillarbox to this orientation.</small>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

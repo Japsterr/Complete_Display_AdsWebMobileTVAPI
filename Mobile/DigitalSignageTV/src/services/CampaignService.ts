@@ -1,5 +1,5 @@
 import DeviceActivationService from './DeviceActivationService';
-import { API_BASE } from '../config';
+import ConfigService from './ConfigService';
 
 interface MediaItem {
   media_id: number;
@@ -28,8 +28,8 @@ class CampaignService {
    */
   async getCurrentCampaign(): Promise<Campaign | null> {
     const deviceId = DeviceActivationService.getDeviceId();
-    
-  const response = await fetch(`${API_BASE}/devices/current-campaign/?device_id=${deviceId}`, {
+    const base = await ConfigService.getApiBase();
+  const response = await fetch(`${base}/devices/current-campaign/?device_id=${deviceId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -59,13 +59,14 @@ class CampaignService {
   /**
    * Get media URL for a media item
    */
-  getMediaUrl(mediaItem: MediaItem): string {
+  async getMediaUrlAsync(mediaItem: MediaItem): Promise<string> {
     // If server already returned a full URL, use it as-is
     if (mediaItem.file_path.startsWith('http://') || mediaItem.file_path.startsWith('https://')) {
       return mediaItem.file_path;
     }
     // Otherwise, construct from API_BASE root
-    const root = API_BASE.replace('/api/v1', '');
+    const base = await ConfigService.getApiBase();
+    const root = base.replace('/api/v1', '');
     return `${root}${mediaItem.file_path.startsWith('/') ? '' : '/'}${mediaItem.file_path}`;
   }
 

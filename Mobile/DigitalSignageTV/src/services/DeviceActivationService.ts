@@ -1,5 +1,5 @@
 import DeviceInfo from 'react-native-device-info';
-import { API_BASE } from '../config';
+import ConfigService from './ConfigService';
 
 interface ActivationResponse {
   activation_code: string;
@@ -79,7 +79,8 @@ class DeviceActivationService {
       throw new Error('Device not initialized. Call initialize() first.');
     }
 
-  const response = await fetch(`${API_BASE}/devices/request-activation/`, {
+  const base = await ConfigService.getApiBase();
+  const response = await fetch(`${base}/devices/request-activation/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -106,7 +107,8 @@ class DeviceActivationService {
       throw new Error('Device not initialized. Call initialize() first.');
     }
 
-  const response = await fetch(`${API_BASE}/devices/check-activation/`, {
+  const base = await ConfigService.getApiBase();
+  const response = await fetch(`${base}/devices/check-activation/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

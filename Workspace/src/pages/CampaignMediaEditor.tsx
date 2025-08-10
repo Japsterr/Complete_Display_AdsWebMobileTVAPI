@@ -27,6 +27,8 @@ type Campaign = {
   name: string;
   description?: string;
   created_at: string;
+  screen_orientation?: 'portrait' | 'landscape';
+  normalize_to_orientation?: 'none' | 'portrait' | 'landscape';
 };
 
 export default function CampaignMediaEditor() {
@@ -365,6 +367,12 @@ export default function CampaignMediaEditor() {
                   <p><strong>Created:</strong> {new Date(campaign.created_at).toLocaleDateString()}</p>
                   <p><strong>Media Count:</strong> {campaignMedia.length}</p>
                   <p><strong>Total Duration:</strong> {campaignMedia.reduce((total, cm) => total + cm.display_duration_seconds, 0)} seconds</p>
+                  <div className="mt-2">
+                    <small className="text-muted">Orientation:</small>{' '}
+                    <span className="badge bg-secondary me-2">{campaign.screen_orientation || 'portrait'}</span>
+                    <small className="text-muted">Normalize:</small>{' '}
+                    <span className="badge bg-light text-dark">{campaign.normalize_to_orientation || 'none'}</span>
+                  </div>
                 </>
               ) : (
                 <p className="text-muted">Loading campaign info...</p>

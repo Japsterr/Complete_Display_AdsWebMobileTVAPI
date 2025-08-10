@@ -1,3 +1,17 @@
+## Orientation controls and QR onboarding
+
+- Dashboard now exposes campaign orientation fields on create/edit:
+	- Screen Orientation: portrait | landscape
+	- Normalize To Orientation: none | portrait | landscape (hint for TV to letterbox/pillarbox)
+
+- TV app shows an activation QR (from /devices/request-activation/) and a code; Manager app includes a QR scanner screen to activate devices via /devices/activate/.
+
+## Configuring server base URL (IP changes)
+
+- Dashboard (Vite): set VITE_API_BASE_URL in `Workspace/.env` or `.env.local`.
+- TV app: on the Activation screen, use “Change Server URL” to override at runtime; persists via AsyncStorage. Default remains src/config.ts.
+- Mobile Manager: API base can be overridden at runtime and persisted; wire a simple settings UI to call ApiService.setBaseUrl(url) if needed.
+
 # 🚀 Complete DisplayAds SaaS Platform - Updated
 
 **A comprehensive digital signage SaaS platform with Web Dashboard, Mobile Management App, Android TV App, and Backend API**

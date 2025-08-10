@@ -113,6 +113,7 @@ export default function CampaignsPage() {
                     <th className="px-4 py-3">Campaign</th>
                     <th className="px-3 py-3">Status</th>
                     <th className="px-3 py-3 text-center">Media</th>
+                    <th className="px-3 py-3">Orientation</th>
                     <th className="px-3 py-3">Schedule</th>
                     <th className="px-3 py-3">Created</th>
                     <th className="px-4 py-3 text-end">Actions</th>
@@ -137,6 +138,14 @@ export default function CampaignsPage() {
                         <small className="text-muted">
                           {campaign.total_duration ? `${campaign.total_duration}s` : '0s'}
                         </small>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div>
+                          <small className="text-muted">Screen:</small>{' '}
+                          <span className="badge bg-secondary me-2">{campaign.screen_orientation || 'portrait'}</span>
+                          <small className="text-muted">Normalize:</small>{' '}
+                          <span className="badge bg-light text-dark">{campaign.normalize_to_orientation || 'none'}</span>
+                        </div>
                       </td>
                       <td className="px-3 py-3">
                         <div className="small">

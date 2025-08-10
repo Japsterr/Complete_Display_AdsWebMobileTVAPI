@@ -7,7 +7,8 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuration
-const BASE_URL = 'http://192.168.3.73:8000/api/v1/';
+const DEFAULT_BASE_URL = 'http://192.168.3.73:8000/api/v1/';
+const BASE_URL_KEY = 'MANAGER_API_BASE_URL_OVERRIDE';
 
 // Types
 export interface User {
@@ -83,7 +84,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: BASE_URL,
+      baseURL: DEFAULT_BASE_URL,
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -114,7 +115,8 @@ class ApiService {
           try {
             const refreshToken = await AsyncStorage.getItem('refresh_token');
             if (refreshToken) {
-              const response = await axios.post(`${BASE_URL}token/refresh/`, {
+              const base = await this.getBaseUrl();
+              const response = await axios.post(`${base}token/refresh/`, {
                 refresh: refreshToken,
               });
               
@@ -136,9 +138,25 @@ class ApiService {
     );
   }
 
+  // Base URL management
+  async getBaseUrl(): Promise<string> {
+    try {
+      const v = await AsyncStorage.getItem(BASE_URL_KEY);
+      return (v && v.length > 0 ? v : DEFAULT_BASE_URL).replace(/\/$/, '/')
+    } catch {
+      return DEFAULT_BASE_URL;
+    }
+  }
+
+  async setBaseUrl(url: string): Promise<void> {
+    const v = url.replace(/\/$/, '/')
+    await AsyncStorage.setItem(BASE_URL_KEY, v);
+    this.api.defaults.baseURL = v;
+  }
+
   // Authentication
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await this.api.post<LoginResponse>('/login/', {
+  const response = await this.api.post<LoginResponse>('/login/', {
       email,
       password,
     });

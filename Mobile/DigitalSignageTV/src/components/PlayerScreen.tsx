@@ -131,15 +131,23 @@ const PlayerScreen: React.FC = () => {
   }
 
   const currentMedia = campaign.media_items[currentMediaIndex];
-  const mediaUrl = CampaignService.getMediaUrl(currentMedia);
+  const [mediaUrl, setMediaUrl] = useState<string>('');
+
+  useEffect(() => {
+    (async () => {
+      if (!currentMedia) return;
+      const u = await CampaignService.getMediaUrlAsync(currentMedia);
+      setMediaUrl(u);
+    })();
+  }, [currentMedia]);
 
   return (
     <View style={styles.container}>
-      {currentMedia.media_type === 'image' ? (
+    {currentMedia.media_type === 'image' ? (
         <Image
           source={{uri: mediaUrl}}
-          style={styles.media}
-          resizeMode="contain"
+      style={styles.media}
+      resizeMode="contain"
         />
       ) : (
         <Video
@@ -162,7 +170,7 @@ const PlayerScreen: React.FC = () => {
             } catch {}
             setCurrentMediaIndex((prevIndex) => (prevIndex + 1) % campaign.media_items.length);
           }}
-          onError={(e) => setError(`Video error: ${JSON.stringify(e?.nativeEvent || e)}`)}
+          onError={(e: any) => setError(`Video error: ${JSON.stringify((e && (e.nativeEvent || e)) || {})}`)}
         />
       )}
       
