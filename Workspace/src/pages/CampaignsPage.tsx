@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlusIcon, PencilIcon, TrashIcon, FilmIcon } from "@heroicons/react/24/outline";
-import api from "../services/api.ts";
+import { PlusIcon, PencilIcon, TrashIcon, FilmIcon, MegaphoneIcon, ClockIcon, ArrowUturnRightIcon } from "@heroicons/react/24/outline";
+import api, { broadcastCampaignApi, dryRunCampaignActionApi, queueCampaignForDisplaysApi, fetchDisplays } from "../services/api.ts";
 
 function StatusBadge({ status }: { status: string }) {
   const statusConfig = {
@@ -29,6 +29,9 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const navigate = useNavigate();
+  const [confirmModal, setConfirmModal] = useState<{ open: boolean; action?: () => Promise<void>; preview?: any; title?: string }>(
+    { open: false }
+  );
 
   useEffect(() => {
     api.get("/campaigns/")
@@ -43,13 +46,69 @@ export default function CampaignsPage() {
   }, []);
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this campaign?")) {
+  if (window.confirm("Are you sure you want to delete this campaign?")) {
       try {
         await api.delete(`/campaigns/${id}/`);
         setCampaigns(campaigns.filter(c => c.campaign_id !== id));
       } catch (err: any) {
         setError(`Failed to delete campaign: ${err.message}`);
       }
+    }
+  };
+
+  const handleBroadcastNow = async (campaignId: number) => {
+    try {
+      const preview = await dryRunCampaignActionApi({ action: 'broadcast' });
+  setConfirmModal({
+        open: true,
+        title: 'Broadcast Now',
+        preview,
+        action: async () => {
+          await broadcastCampaignApi({ campaign_id: campaignId });
+        }
+      });
+    } catch (e: any) {
+      setError(e?.response?.data?.error || 'Failed to prepare broadcast');
+    }
+  };
+
+  const handleQueueNext = async (campaignId: number) => {
+    const minutes = Number(prompt('Duration in minutes for the queued window?', '15') || '0');
+    if (!minutes || minutes <= 0) return;
+    try {
+      const allDisplays = await fetchDisplays();
+      const ids = allDisplays.map(d => d.display_id);
+      const preview = await dryRunCampaignActionApi({ action: 'queue_displays', display_ids: ids, duration_minutes: minutes });
+      setConfirmModal({
+        open: true,
+        title: 'Queue Next',
+        preview,
+        action: async () => {
+          // Apply to all displays by default
+          await queueCampaignForDisplaysApi({ campaign_id: campaignId, display_ids: ids, duration_minutes: minutes });
+        }
+      });
+    } catch (e: any) {
+      setError(e?.response?.data?.error || 'Failed to prepare queue');
+    }
+  };
+
+  const handleScheduleWindow = async (campaignId: number) => {
+    const start = prompt('Start ISO (e.g. 2025-01-01T09:00)');
+    const end = prompt('End ISO (e.g. 2025-01-01T17:00)');
+    if (!start || !end) return;
+    try {
+  const preview = await dryRunCampaignActionApi({ action: 'broadcast' });
+  setConfirmModal({
+        open: true,
+        title: 'Schedule Window',
+        preview,
+        action: async () => {
+          await broadcastCampaignApi({ campaign_id: campaignId, start_datetime: start, end_datetime: end });
+        }
+      });
+    } catch (e: any) {
+      setError(e?.response?.data?.error || 'Failed to prepare schedule');
     }
   };
 
@@ -174,6 +233,30 @@ export default function CampaignsPage() {
                         <div className="btn-group btn-group-sm" role="group">
                           <button
                             type="button"
+                            className="btn btn-outline-success"
+                            onClick={() => handleBroadcastNow(campaign.campaign_id)}
+                            title="Broadcast Now"
+                          >
+                            <MegaphoneIcon style={{ width: '14px', height: '14px' }} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline-info"
+                            onClick={() => handleScheduleWindow(campaign.campaign_id)}
+                            title="Schedule Window"
+                          >
+                            <ClockIcon style={{ width: '14px', height: '14px' }} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            onClick={() => handleQueueNext(campaign.campaign_id)}
+                            title="Queue Next"
+                          >
+                            <ArrowUturnRightIcon style={{ width: '14px', height: '14px' }} />
+                          </button>
+                          <button
+                            type="button"
                             className="btn btn-outline-primary"
                             onClick={() => navigate(`/campaigns/${campaign.campaign_id}/edit`)}
                             title="Edit Campaign"
@@ -202,6 +285,29 @@ export default function CampaignsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+  {confirmModal.open && (
+        <div className="modal show d-block" style={{ zIndex: 1060 }}>
+      <div className="modal-backdrop show" onClick={() => setConfirmModal({ open: false })}></div>
+          <div className="modal-dialog modal-md modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+        <h5 className="modal-title">{confirmModal.title || 'Confirm Action'}</h5>
+        <button type="button" className="btn-close" onClick={() => setConfirmModal({ open: false })}></button>
+              </div>
+              <div className="modal-body">
+                <div className="small text-muted mb-2">Dry‑run preview</div>
+                <pre className="bg-light p-2 rounded" style={{ maxHeight: 240, overflow: 'auto' }}>
+{JSON.stringify(confirmModal.preview, null, 2)}
+                </pre>
+              </div>
+              <div className="modal-footer">
+        <button className="btn btn-secondary" onClick={() => setConfirmModal({ open: false })}>Cancel</button>
+        <button className="btn btn-primary" onClick={async () => { try { await confirmModal.action?.(); setConfirmModal({ open: false }); } catch (e) { /* handled by interceptors */ } }}>Proceed</button>
+              </div>
             </div>
           </div>
         </div>

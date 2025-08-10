@@ -402,6 +402,7 @@ class Schedule(models.Model):
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
     priority = models.IntegerField(default=0)
+    preempt = models.BooleanField(default=False, help_text='If true, this schedule preempts other overlapping schedules regardless of priority')
 
     class Meta:
         db_table = 'Schedules'

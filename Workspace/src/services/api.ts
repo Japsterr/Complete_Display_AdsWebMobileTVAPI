@@ -52,6 +52,39 @@ export interface Display {
   default_campaign_name?: string;
 }
 
+// Scheduling & control payloads
+export interface AssignPayload {
+  campaign_id: number;
+  display_ids?: number[];
+  group_id?: number;
+  start_datetime?: string;
+  end_datetime?: string;
+  priority?: number;
+  preempt?: boolean;
+}
+
+export interface QueuePayload {
+  campaign_id: number;
+  display_ids: number[];
+  duration_minutes: number;
+  priority?: number;
+  preempt?: boolean;
+}
+
+export interface DryRunPayload extends Partial<AssignPayload>, Partial<QueuePayload> {
+  action: 'assign_displays' | 'assign_group' | 'broadcast' | 'queue_displays';
+}
+
+export interface UnassignPayload {
+  display_ids?: number[];
+  group_id?: number;
+  clear_default?: boolean;
+  clear_schedules?: boolean;
+  clear_future_only?: boolean;
+  start_datetime?: string;
+  end_datetime?: string;
+}
+
 // Activation types
 export interface ActivationRequestResponse {
   activation_code: string;
@@ -119,6 +152,47 @@ export const checkActivationStatus = async (deviceId: string): Promise<Activatio
 export const activateDevice = async (payload: { activation_code: string; display_name?: string; location?: string; }) => {
   const response = await api.post('/devices/activate/', payload);
   return response.data;
+};
+
+// Scheduling & control API
+export const assignCampaignToDisplaysApi = async (payload: AssignPayload) => {
+  const res = await api.post('/campaigns/assign/displays/', payload);
+  return res.data;
+};
+
+export const assignCampaignToGroupApi = async (payload: AssignPayload) => {
+  const res = await api.post('/campaigns/assign/group/', payload);
+  return res.data;
+};
+
+export const broadcastCampaignApi = async (payload: AssignPayload) => {
+  const res = await api.post('/campaigns/broadcast/', payload);
+  return res.data;
+};
+
+export const queueCampaignForDisplaysApi = async (payload: QueuePayload) => {
+  const res = await api.post('/campaigns/queue/displays/', payload);
+  return res.data;
+};
+
+export const dryRunCampaignActionApi = async (payload: DryRunPayload) => {
+  const res = await api.post('/campaigns/dry-run/', payload);
+  return res.data;
+};
+
+export const bulkUnassignDisplaysApi = async (payload: UnassignPayload) => {
+  const res = await api.post('/campaigns/unassign/displays/', payload);
+  return res.data;
+};
+
+export const bulkUnassignGroupApi = async (payload: UnassignPayload) => {
+  const res = await api.post('/campaigns/unassign/group/', payload);
+  return res.data;
+};
+
+export const bulkUnassignAllApi = async (payload: Omit<UnassignPayload, 'display_ids' | 'group_id'> = {}) => {
+  const res = await api.post('/campaigns/unassign/all/', payload);
+  return res.data;
 };
 
 export default api;

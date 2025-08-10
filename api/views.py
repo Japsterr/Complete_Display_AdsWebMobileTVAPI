@@ -681,10 +681,15 @@ def get_device_campaign(request):
         
         # Check for scheduled campaigns first
         now = timezone.now()
-        schedule = (Schedule.objects
-            .filter(display=display, start_datetime__lte=now, end_datetime__gte=now)
-            .order_by('-priority')
-            .first())
+        # Select current schedule honoring preempt flag first, then priority
+        overlapping = Schedule.objects.filter(display=display, start_datetime__lte=now, end_datetime__gte=now)
+        schedule = None
+        if overlapping.exists():
+            preempts = overlapping.filter(preempt=True).order_by('-priority')
+            if preempts.exists():
+                schedule = preempts.first()
+            else:
+                schedule = overlapping.order_by('-priority').first()
         
         campaign = None
         if schedule:
@@ -1305,6 +1310,7 @@ def assign_campaign_to_displays(request):
     start_dt = request.data.get('start_datetime')
     end_dt = request.data.get('end_datetime')
     priority = int(request.data.get('priority') or 0)
+    preempt = bool(request.data.get('preempt') in [True, 'true', 'True', 1, '1'])
 
     if not campaign_id or not isinstance(display_ids, list) or not display_ids:
         return Response({'error': 'campaign_id and display_ids[] required'}, status=400)
@@ -1324,7 +1330,14 @@ def assign_campaign_to_displays(request):
         if not sdt or not edt or edt <= sdt:
             return Response({'error': 'Invalid start/end datetimes'}, status=400)
         for d in allowed_displays:
-            sch = Schedule.objects.create(display=d, campaign=campaign, start_datetime=sdt, end_datetime=edt, priority=priority)
+            sch = Schedule.objects.create(
+                display=d,
+                campaign=campaign,
+                start_datetime=sdt,
+                end_datetime=edt,
+                priority=priority,
+                preempt=preempt,
+            )
             created_schedules.append(sch.schedule_id)
             modified += 1
     else:
@@ -1393,6 +1406,7 @@ def queue_campaign_for_displays(request):
     display_ids = request.data.get('display_ids') or []
     duration_minutes = int(request.data.get('duration_minutes') or 0)
     priority = int(request.data.get('priority') or 0)
+    preempt = bool(request.data.get('preempt') in [True, 'true', 'True', 1, '1'])
     if not campaign_id or not isinstance(display_ids, list) or not display_ids or duration_minutes <= 0:
         return Response({'error': 'campaign_id, display_ids[], and duration_minutes>0 required'}, status=400)
     try:
@@ -1408,6 +1422,150 @@ def queue_campaign_for_displays(request):
         if last and last.end_datetime and last.end_datetime > start:
             start = last.end_datetime
         end = start + timedelta(minutes=duration_minutes)
-        sch = Schedule.objects.create(display=d, campaign=campaign, start_datetime=start, end_datetime=end, priority=priority)
+        sch = Schedule.objects.create(
+            display=d,
+            campaign=campaign,
+            start_datetime=start,
+            end_datetime=end,
+            priority=priority,
+            preempt=preempt,
+        )
         created.append({'display_id': d.display_id, 'schedule_id': sch.schedule_id, 'start': start, 'end': end})
     return Response({'status': 'ok', 'created': created})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def dry_run_campaign_action(request):
+    """Preview the effect of an action without persisting changes.
+
+    Body: {
+      action: 'assign_displays'|'assign_group'|'broadcast'|'queue_displays',
+      ... same payload fields as respective endpoints ...
+    }
+    """
+    action = request.data.get('action')
+    if not action:
+        return Response({'error': 'action required'}, status=400)
+
+    result = {'action': action}
+    try:
+        if action == 'broadcast':
+            displays = _get_user_displays(request)
+            ids = list(displays.values_list('display_id', flat=True))
+            result.update({
+                'target': 'all',
+                'affected_displays': ids,
+                'count': len(ids),
+            })
+        elif action == 'assign_group':
+            group_id = request.data.get('group_id')
+            if not group_id:
+                return Response({'error': 'group_id required'}, status=400)
+            try:
+                group = DisplayGroup.objects.get(id=group_id)
+            except DisplayGroup.DoesNotExist:
+                return Response({'error': 'Group not found'}, status=404)
+            if group.owner != request.user:
+                return Response({'error': 'Not allowed for this group'}, status=403)
+            allowed_ids = list(_get_user_displays(request).values_list('display_id', flat=True))
+            ids = list(group.displays.filter(display_id__in=allowed_ids).values_list('display_id', flat=True))
+            result.update({'target': 'group', 'group_id': group_id, 'affected_displays': ids, 'count': len(ids)})
+        elif action == 'assign_displays':
+            display_ids = request.data.get('display_ids') or []
+            ids = list(_get_user_displays(request).filter(display_id__in=display_ids).values_list('display_id', flat=True))
+            result.update({'target': 'displays', 'affected_displays': ids, 'count': len(ids)})
+        elif action == 'queue_displays':
+            display_ids = request.data.get('display_ids') or []
+            duration_minutes = int(request.data.get('duration_minutes') or 0)
+            if duration_minutes <= 0:
+                return Response({'error': 'duration_minutes>0 required'}, status=400)
+            displays = _get_user_displays(request).filter(display_id__in=display_ids)
+            preview = []
+            for d in displays:
+                last = d.schedules.order_by('-end_datetime').first()
+                start = timezone.now()
+                if last and last.end_datetime and last.end_datetime > start:
+                    start = last.end_datetime
+                end = start + timedelta(minutes=duration_minutes)
+                preview.append({'display_id': d.display_id, 'start': start, 'end': end})
+            result.update({'target': 'displays', 'preview': preview, 'count': len(preview)})
+        else:
+            return Response({'error': 'Unknown action'}, status=400)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+    return Response({'status': 'ok', **result})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_unassign_displays(request):
+    """Clear default campaigns and/or schedules for specified displays.
+
+    Body: {
+      display_ids: [number],
+      clear_default?: bool (default true),
+      clear_schedules?: bool (default true),
+      clear_future_only?: bool (default false),
+      start_datetime?: ISO,
+      end_datetime?: ISO
+    }
+    """
+    display_ids = request.data.get('display_ids') or []
+    if not isinstance(display_ids, list) or not display_ids:
+        return Response({'error': 'display_ids[] required'}, status=400)
+    clear_default = request.data.get('clear_default', True)
+    clear_schedules = request.data.get('clear_schedules', True)
+    clear_future_only = request.data.get('clear_future_only', False)
+    from django.utils.dateparse import parse_datetime
+    start_dt = parse_datetime(request.data.get('start_datetime')) if request.data.get('start_datetime') else None
+    end_dt = parse_datetime(request.data.get('end_datetime')) if request.data.get('end_datetime') else None
+
+    displays = _get_user_displays(request).filter(display_id__in=display_ids)
+    modified = {'default_cleared': 0, 'schedules_deleted': 0}
+    now = timezone.now()
+    for d in displays:
+        if clear_default and d.default_campaign is not None:
+            d.default_campaign = None
+            d.save(update_fields=['default_campaign'])
+            modified['default_cleared'] += 1
+        if clear_schedules:
+            qs = d.schedules.all()
+            if clear_future_only:
+                qs = qs.filter(start_datetime__gte=now)
+            if start_dt:
+                qs = qs.filter(end_datetime__gte=start_dt)
+            if end_dt:
+                qs = qs.filter(start_datetime__lte=end_dt)
+            count = qs.count()
+            qs.delete()
+            modified['schedules_deleted'] += count
+    return Response({'status': 'ok', **modified})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_unassign_group(request):
+    group_id = request.data.get('group_id')
+    if not group_id:
+        return Response({'error': 'group_id required'}, status=400)
+    try:
+        group = DisplayGroup.objects.get(id=group_id)
+    except DisplayGroup.DoesNotExist:
+        return Response({'error': 'Group not found'}, status=404)
+    if group.owner != request.user:
+        return Response({'error': 'Not allowed for this group'}, status=403)
+    ids = list(group.displays.values_list('display_id', flat=True))
+    data = request.data.copy()
+    data['display_ids'] = ids
+    request._full_data = data
+    return bulk_unassign_displays(request)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_unassign_all(request):
+    ids = list(_get_user_displays(request).values_list('display_id', flat=True))
+    if not ids:
+        return Response({'status': 'ok', 'default_cleared': 0, 'schedules_deleted': 0})
+    data = request.data.copy()
+    data['display_ids'] = ids
+    request._full_data = data
+    return bulk_unassign_displays(request)

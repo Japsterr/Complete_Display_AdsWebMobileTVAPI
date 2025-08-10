@@ -41,6 +41,20 @@
 	- Delphi SDK updated (SDKs/Delphi/DisplayAdsAPI.pas):
 		- AssignCampaignToDisplays, AssignCampaignToGroup, BroadcastCampaign, QueueCampaignForDisplays
 
+## Scheduling policy and controls (new)
+
+- Preempt flag: Schedules now support a boolean preempt field. When multiple schedules overlap, preempt=true windows take precedence; otherwise the highest priority wins. If no schedule applies, the TV falls back to the display's default campaign.
+- Dry‑run endpoint: POST /api/v1/campaigns/dry-run/ lets you preview the affected displays and, for queue actions, the calculated start/end per display before making changes.
+- Bulk unassign: Clear defaults and/or schedules for selected displays, a group, or all of your displays:
+	- POST /api/v1/campaigns/unassign/displays/
+	- POST /api/v1/campaigns/unassign/group/
+	- POST /api/v1/campaigns/unassign/all/
+- Dashboard quick actions on the Campaigns page:
+	- Broadcast Now
+	- Schedule Window (prompts for start/end ISO)
+	- Queue Next (prompts for duration and appends after the last window)
+	Each action shows a JSON preview from the dry‑run endpoint before confirmation.
+
 # 🚀 Complete DisplayAds SaaS Platform - Updated
 
 **A comprehensive digital signage SaaS platform with Web Dashboard, Mobile Management App, Android TV App, and Backend API**

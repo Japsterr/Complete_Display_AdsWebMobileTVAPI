@@ -9,7 +9,8 @@ from .views import (
     analytics_summary, export_impressions_csv, export_devices_csv, analytics_campaign_breakdown,
     OrganizationViewSet, MembershipViewSet, InvitationViewSet, AuditLogViewSet,
     DisplayGroupViewSet, TagViewSet, MediaApprovalViewSet,
-    assign_campaign_to_displays, assign_campaign_to_group, broadcast_campaign, queue_campaign_for_displays
+    assign_campaign_to_displays, assign_campaign_to_group, broadcast_campaign, queue_campaign_for_displays,
+    dry_run_campaign_action, bulk_unassign_displays, bulk_unassign_group, bulk_unassign_all
 )
 from .stripe_views import CreateCheckoutSessionView, get_stripe_config, stripe_webhook
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
@@ -65,6 +66,10 @@ urlpatterns = [
     path('campaigns/assign/group/', assign_campaign_to_group, name='assign-campaign-group'),
     path('campaigns/broadcast/', broadcast_campaign, name='broadcast-campaign'),
     path('campaigns/queue/displays/', queue_campaign_for_displays, name='queue-campaign-displays'),
+    path('campaigns/dry-run/', dry_run_campaign_action, name='campaign-dry-run'),
+    path('campaigns/unassign/displays/', bulk_unassign_displays, name='bulk-unassign-displays'),
+    path('campaigns/unassign/group/', bulk_unassign_group, name='bulk-unassign-group'),
+    path('campaigns/unassign/all/', bulk_unassign_all, name='bulk-unassign-all'),
     
     # Stripe payment endpoints
     path('payments/create-checkout-session/', CreateCheckoutSessionView.as_view(), name='create-checkout-session'),

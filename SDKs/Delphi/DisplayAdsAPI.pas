@@ -50,7 +50,11 @@ type
   function AssignCampaignToDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; const StartISO: string = ''; const EndISO: string = ''; Priority: Integer = 0): TJSONValue;
   function AssignCampaignToGroup(CampaignId, GroupId: Integer; const StartISO: string = ''; const EndISO: string = ''; Priority: Integer = 0): TJSONValue;
   function BroadcastCampaign(CampaignId: Integer; const StartISO: string = ''; const EndISO: string = ''; Priority: Integer = 0): TJSONValue;
-  function QueueCampaignForDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; DurationMinutes: Integer; Priority: Integer = 0): TJSONValue;
+  function QueueCampaignForDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; DurationMinutes: Integer; Priority: Integer = 0; Preempt: Boolean = False): TJSONValue;
+  function CampaignDryRun(const Action: string; const Payload: TJSONObject): TJSONValue;
+  function BulkUnassignDisplays(const DisplayIds: TArray<Integer>; ClearDefault, ClearSchedules, ClearFutureOnly: Boolean; const StartISO: string = ''; const EndISO: string = ''): TJSONValue;
+  function BulkUnassignGroup(GroupId: Integer; ClearDefault, ClearSchedules, ClearFutureOnly: Boolean; const StartISO: string = ''; const EndISO: string = ''): TJSONValue;
+  function BulkUnassignAll(ClearDefault, ClearSchedules, ClearFutureOnly: Boolean; const StartISO: string = ''; const EndISO: string = ''): TJSONValue;
 
     // Displays & Activation
     function ListDisplays: TJSONValue;
@@ -325,6 +329,7 @@ begin
       Body.AddPair('start_datetime', StartISO);
       Body.AddPair('end_datetime', EndISO);
       Body.AddPair('priority', TJSONNumber.Create(Priority));
+  // Optional preempt: set via Body.AddPair('preempt', TJSONBool.Create(True)) by caller using PostJson override
     end;
     Result := PostJson('/api/v1/campaigns/assign/displays/', Body, True);
   finally
@@ -369,7 +374,7 @@ begin
   end;
 end;
 
-function TDisplayAdsClient.QueueCampaignForDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; DurationMinutes: Integer; Priority: Integer): TJSONValue;
+function TDisplayAdsClient.QueueCampaignForDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; DurationMinutes: Integer; Priority: Integer; Preempt: Boolean): TJSONValue;
 var Body: TJSONObject; Arr: TJSONArray; I: Integer;
 begin
   Body := TJSONObject.Create;
@@ -380,7 +385,75 @@ begin
     Body.AddPair('display_ids', Arr);
     Body.AddPair('duration_minutes', TJSONNumber.Create(DurationMinutes));
     Body.AddPair('priority', TJSONNumber.Create(Priority));
+    Body.AddPair('preempt', TJSONBool.Create(Preempt));
     Result := PostJson('/api/v1/campaigns/queue/displays/', Body, True);
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDisplayAdsClient.CampaignDryRun(const Action: string; const Payload: TJSONObject): TJSONValue;
+var Body: TJSONObject;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('action', Action);
+    // Merge payload fields
+    if Assigned(Payload) then
+      Body.Merge(Payload);
+    Result := PostJson('/api/v1/campaigns/dry-run/', Body, True);
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDisplayAdsClient.BulkUnassignDisplays(const DisplayIds: TArray<Integer>; ClearDefault, ClearSchedules, ClearFutureOnly: Boolean; const StartISO, EndISO: string): TJSONValue;
+var Body: TJSONObject; Arr: TJSONArray; I: Integer;
+begin
+  Body := TJSONObject.Create;
+  try
+    Arr := TJSONArray.Create;
+    for I := 0 to High(DisplayIds) do Arr.Add(DisplayIds[I]);
+    Body.AddPair('display_ids', Arr);
+    Body.AddPair('clear_default', TJSONBool.Create(ClearDefault));
+    Body.AddPair('clear_schedules', TJSONBool.Create(ClearSchedules));
+    Body.AddPair('clear_future_only', TJSONBool.Create(ClearFutureOnly));
+    if StartISO <> '' then Body.AddPair('start_datetime', StartISO);
+    if EndISO <> '' then Body.AddPair('end_datetime', EndISO);
+    Result := PostJson('/api/v1/campaigns/unassign/displays/', Body, True);
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDisplayAdsClient.BulkUnassignGroup(GroupId: Integer; ClearDefault, ClearSchedules, ClearFutureOnly: Boolean; const StartISO, EndISO: string): TJSONValue;
+var Body: TJSONObject;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('group_id', TJSONNumber.Create(GroupId));
+    Body.AddPair('clear_default', TJSONBool.Create(ClearDefault));
+    Body.AddPair('clear_schedules', TJSONBool.Create(ClearSchedules));
+    Body.AddPair('clear_future_only', TJSONBool.Create(ClearFutureOnly));
+    if StartISO <> '' then Body.AddPair('start_datetime', StartISO);
+    if EndISO <> '' then Body.AddPair('end_datetime', EndISO);
+    Result := PostJson('/api/v1/campaigns/unassign/group/', Body, True);
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDisplayAdsClient.BulkUnassignAll(ClearDefault, ClearSchedules, ClearFutureOnly: Boolean; const StartISO, EndISO: string): TJSONValue;
+var Body: TJSONObject;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('clear_default', TJSONBool.Create(ClearDefault));
+    Body.AddPair('clear_schedules', TJSONBool.Create(ClearSchedules));
+    Body.AddPair('clear_future_only', TJSONBool.Create(ClearFutureOnly));
+    if StartISO <> '' then Body.AddPair('start_datetime', StartISO);
+    if EndISO <> '' then Body.AddPair('end_datetime', EndISO);
+    Result := PostJson('/api/v1/campaigns/unassign/all/', Body, True);
   finally
     Body.Free;
   end;
