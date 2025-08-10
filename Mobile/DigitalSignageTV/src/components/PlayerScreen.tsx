@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
+import Video from 'react-native-video';
 import CampaignService, {Campaign, MediaItem} from '../services/CampaignService';
 import AnalyticsService from '../services/AnalyticsService';
 import { HEARTBEAT_INTERVAL_MS } from '../config';
@@ -44,19 +45,20 @@ const PlayerScreen: React.FC = () => {
   return () => { clearInterval(hb); stopPolling(); };
   }, []);
 
-  // Auto-advance through media items
+  // Auto-advance through media items (images use timer; videos advance on onEnd)
   useEffect(() => {
     if (!campaign || campaign.media_items.length === 0) return;
 
     const currentMedia = campaign.media_items[currentMediaIndex];
-    const duration = currentMedia.duration * 1000; // Convert to milliseconds
-
-    // record impression completion upon advance
+    if (currentMedia.media_type === 'video') {
+      // For video, rely on onEnd to advance
+      return;
+    }
+    const duration = currentMedia.duration * 1000; // Convert to ms
     const timer = setTimeout(() => {
-      // record impression
       try {
         AnalyticsService.recordImpression({
-          device_id: '', // filled on server via device_id; we still pass for completeness
+          device_id: '',
           media_id: currentMedia.media_id,
           campaign_id: campaign.campaign_id,
           duration_shown: currentMedia.duration,
@@ -66,11 +68,8 @@ const PlayerScreen: React.FC = () => {
           total_media_in_campaign: campaign.media_items.length,
         });
       } catch {}
-      setCurrentMediaIndex((prevIndex) => 
-        (prevIndex + 1) % campaign.media_items.length
-      );
+      setCurrentMediaIndex((prevIndex) => (prevIndex + 1) % campaign.media_items.length);
     }, duration);
-
     return () => clearTimeout(timer);
   }, [campaign, currentMediaIndex]);
 
@@ -143,13 +142,28 @@ const PlayerScreen: React.FC = () => {
           resizeMode="contain"
         />
       ) : (
-        // For video, we'll need react-native-video or similar
-        // For now, show placeholder
-        <View style={styles.videoPlaceholder}>
-          <Text style={styles.videoPlaceholderText}>
-            Video: {currentMedia.name}
-          </Text>
-        </View>
+        <Video
+          source={{uri: mediaUrl}}
+          style={styles.media}
+          resizeMode="contain"
+          paused={false}
+          onEnd={() => {
+            try {
+              AnalyticsService.recordImpression({
+                device_id: '',
+                media_id: currentMedia.media_id,
+                campaign_id: campaign.campaign_id,
+                duration_shown: currentMedia.duration,
+                scheduled_duration: currentMedia.duration,
+                completed: true,
+                sequence_number: currentMediaIndex + 1,
+                total_media_in_campaign: campaign.media_items.length,
+              });
+            } catch {}
+            setCurrentMediaIndex((prevIndex) => (prevIndex + 1) % campaign.media_items.length);
+          }}
+          onError={(e) => setError(`Video error: ${JSON.stringify(e?.nativeEvent || e)}`)}
+        />
       )}
       
       {/* Campaign info overlay (can be hidden in production) */}
