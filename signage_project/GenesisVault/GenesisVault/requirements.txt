@@ -1,0 +1,3 @@
+# GenesisVault frontend requirements (Node.js project)
+# For Python backend, add Django, Flask, etc. as needed
+# This file is a placeholder for backend requirements

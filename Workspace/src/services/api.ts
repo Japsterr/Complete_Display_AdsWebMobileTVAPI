@@ -1,8 +1,9 @@
 import axios from "axios";
 import type { AxiosInstance } from "axios";
 
+const apiBase = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1/";
 const api: AxiosInstance = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/v1/",
+  baseURL: apiBase,
 });
 
 api.interceptors.request.use(config => {
@@ -51,6 +52,26 @@ export interface Display {
   default_campaign_name?: string;
 }
 
+// Activation types
+export interface ActivationRequestResponse {
+  activation_code: string;
+  status: string; // 'pending' | 'already_activated'
+  activation_url?: string;
+  activation_qr_png_base64?: string | null;
+  expires_in_seconds?: number | null;
+  message?: string;
+}
+
+export interface ActivationStatusResponse {
+  status: string; // 'active' | 'pending' | ...
+  activated: boolean;
+  activation_code?: string;
+  expires_in_seconds?: number | null;
+  display_name?: string;
+  location?: string;
+  message?: string;
+}
+
 // Campaign API functions
 export const fetchCampaigns = async (): Promise<Campaign[]> => {
   const response = await api.get('/campaigns/');
@@ -78,6 +99,25 @@ export const registerDisplay = async (displayData: {
   device_id: string;
 }): Promise<Display> => {
   const response = await api.post('/displays/', displayData);
+  return response.data;
+};
+
+// Activation API
+export const requestActivationCode = async (deviceId: string, info?: Record<string, any>): Promise<ActivationRequestResponse> => {
+  const response = await api.post('/devices/request-activation/', {
+    device_id: deviceId,
+    device_info: info ?? {},
+  });
+  return response.data;
+};
+
+export const checkActivationStatus = async (deviceId: string): Promise<ActivationStatusResponse> => {
+  const response = await api.post('/devices/check-activation/', { device_id: deviceId });
+  return response.data;
+};
+
+export const activateDevice = async (payload: { activation_code: string; display_name?: string; location?: string; }) => {
+  const response = await api.post('/devices/activate/', payload);
   return response.data;
 };
 

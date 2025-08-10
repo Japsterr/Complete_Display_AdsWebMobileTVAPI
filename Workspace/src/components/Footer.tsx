@@ -2,13 +2,13 @@ import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer className="bg-dark text-light py-5 mt-auto">
+    <footer className="text-light py-5 mt-auto" style={{ backgroundColor: '#1a1b1e', borderTop: '1px solid rgba(255,107,53,0.25)' }}>
       <div className="container">
         <div className="row g-4">
           <div className="col-lg-6 col-md-12">
             <div className="d-flex align-items-center mb-3">
-              <i className="bi bi-display text-primary me-2" style={{fontSize: '1.5rem'}}></i>
-              <span className="h4 mb-0 fw-bold">DisplayAds</span>
+              <i className="bi bi-display me-2" style={{fontSize: '1.5rem', color: '#ff6b35'}}></i>
+              <span className="h4 mb-0 fw-bold" style={{ color: '#ffd6c5' }}>DisplayAds</span>
             </div>
             <p className="text-light opacity-75">
               The complete digital signage platform for businesses of all sizes. 

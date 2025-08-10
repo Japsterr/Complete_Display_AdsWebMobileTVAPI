@@ -2,9 +2,9 @@ import { Link, NavLink } from "react-router-dom";
 
 export default function PublicNavbar() {
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <nav className="navbar navbar-expand-lg" style={{ backgroundColor: '#1a1b1e', borderBottom: '1px solid rgba(255,107,53,0.25)' }}>
       <div className="container">
-        <Link className="navbar-brand fw-bold text-primary" to="/">
+        <Link className="navbar-brand fw-bold" to="/" style={{ color: '#ff6b35' }}>
           <i className="bi bi-display me-2"></i>
           DisplayAds
         </Link>
@@ -26,9 +26,10 @@ export default function PublicNavbar() {
             <li className="nav-item">
               <NavLink 
                 className={({ isActive }) => 
-                  `nav-link ${isActive ? 'active text-primary fw-semibold' : ''}`
+                  `nav-link ${isActive ? 'fw-semibold' : ''}`
                 } 
                 to="/features"
+                style={({ isActive }) => ({ color: isActive ? '#ff6b35' : '#cbd5e0' })}
               >
                 Features
               </NavLink>
@@ -36,9 +37,10 @@ export default function PublicNavbar() {
             <li className="nav-item">
               <NavLink 
                 className={({ isActive }) => 
-                  `nav-link ${isActive ? 'active text-primary fw-semibold' : ''}`
+                  `nav-link ${isActive ? 'fw-semibold' : ''}`
                 } 
                 to="/pricing"
+                style={({ isActive }) => ({ color: isActive ? '#ff6b35' : '#cbd5e0' })}
               >
                 Pricing
               </NavLink>
@@ -46,10 +48,10 @@ export default function PublicNavbar() {
           </ul>
           
           <div className="d-flex gap-2">
-            <Link to="/login" className="btn btn-outline-primary">
+            <Link to="/login" className="btn btn-outline-light" style={{ borderColor: '#ff6b35', color: '#ff6b35' }}>
               Log in
             </Link>
-            <Link to="/register" className="btn btn-primary">
+            <Link to="/register" className="btn" style={{ backgroundColor: '#ff6b35', color: '#1a1b1e' }}>
               Get started
             </Link>
           </div>

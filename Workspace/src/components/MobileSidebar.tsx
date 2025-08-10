@@ -29,12 +29,12 @@ export default function MobileSidebar({ open, setOpen }: MobileSidebarProps) {
   return (
     <>
       <div className="mobile-sidebar-overlay d-md-none" onClick={() => setOpen(false)}></div>
-      <nav className="mobile-sidebar d-md-none">
+      <nav className="mobile-sidebar d-md-none" style={{ backgroundColor: '#1a1b1e', borderRight: '1px solid rgba(255,107,53,0.25)' }}>
         <div className="d-flex flex-column h-100">
-          <div className="flex-shrink-0 p-4 border-bottom border-secondary d-flex justify-content-between align-items-center">
+          <div className="flex-shrink-0 p-4 d-flex justify-content-between align-items-center" style={{ borderBottom: '1px solid rgba(255,107,53,0.25)' }}>
             <div className="d-flex align-items-center">
-              <div className="rounded p-2 bg-primary me-3">
-                <span className="text-white fw-bold">D</span>
+              <div className="rounded p-2 me-3" style={{ background: 'linear-gradient(135deg, #ff6b35 0%, #ff925f 100%)' }}>
+                <span className="fw-bold" style={{ color: '#1a1b1e' }}>D</span>
               </div>
               <h2 className="h5 mb-0 text-white fw-bold">DisplayAds</h2>
             </div>

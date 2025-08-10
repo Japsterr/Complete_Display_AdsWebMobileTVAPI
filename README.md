@@ -282,3 +282,7 @@ adb install app/build/outputs/apk/release/app-release.apk
 **Status**: ✅ **PRODUCTION READY** - Ready for commercial launch
 
 **Last Updated**: August 3, 2025 - Complete system with all features implemented
+
+### Notes on Media Previews (MinIO)
+
+Docker compose includes a one-off `minio-setup` job that ensures a `media` bucket exists and allows anonymous downloads (public read). The API constructs media URLs using `MINIO_PUBLIC_ENDPOINT` (defaults to `http://localhost:9000`). If you access the frontend from another host or via a proxy, set this env var accordingly.

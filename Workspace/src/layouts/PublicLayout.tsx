@@ -4,9 +4,9 @@ import Footer from "../components/Footer";
 
 export default function PublicLayout() {
   return (
-    <div className="d-flex flex-column min-vh-100">
+    <div className="d-flex flex-column min-vh-100 public-dark">
       <PublicNavbar />
-      <main className="flex-grow-1">
+      <main className="flex-grow-1" style={{ backgroundColor: '#1a1b1e' }}>
         <Outlet />
       </main>
       <Footer />

@@ -59,7 +59,9 @@ class DigitalSignageAPITests(APITestCase):
         data = {
             'email': 'newuser@test.com',
             'password': 'securepass123',
-            'account_type': 'personal'
+            'account_type': 'personal',
+            'first_name': 'Test',
+            'last_name': 'User'
         }
         
         response = self.client.post('/api/v1/register/', data)
@@ -78,7 +80,10 @@ class DigitalSignageAPITests(APITestCase):
         data = {
             'email': 'newbusiness@test.com',
             'password': 'securepass123',
-            'account_type': 'business'
+            'account_type': 'business',
+            'first_name': 'Biz',
+            'last_name': 'Owner',
+            'business_name': "BizTest LLC"
         }
         
         response = self.client.post('/api/v1/register/', data)
@@ -275,7 +280,9 @@ class DigitalSignageAPITests(APITestCase):
         response = self.client.post('/api/v1/register/', {
             'email': 'securitytest@test.com',
             'password': 'plaintextpassword',
-            'account_type': 'personal'
+            'account_type': 'personal',
+            'first_name': 'Sec',
+            'last_name': 'Test'
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertNotIn('password', response.data)

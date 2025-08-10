@@ -1,3 +1,70 @@
+from django.conf import settings
+from django.db import models
+# --- Display Grouping, Tagging, and Moderation ---
+class DisplayGroup(models.Model):
+    name = models.CharField(max_length=255)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='display_groups')
+    displays = models.ManyToManyField('Display', related_name='groups', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+class MediaApproval(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    media = models.ForeignKey('Media', on_delete=models.CASCADE, related_name='approvals')
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    comments = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.media} - {self.status}"
+# Organization & User Management Models
+from django.db import models
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
+
+class Organization(models.Model):
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_organizations')
+
+    def __str__(self):
+        return self.name
+
+class Membership(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    role = models.CharField(max_length=50, default='member')
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+class Invitation(models.Model):
+    email = models.EmailField()
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    accepted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class AuditLog(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    details = models.TextField(blank=True)
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from .managers import CustomUserManager
@@ -155,6 +222,12 @@ class Campaign(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     screen_orientation = models.CharField(max_length=10, choices=[('portrait', 'Portrait'), ('landscape', 'Landscape')], default='portrait', help_text='Orientation for all media in this campaign')
+    normalize_to_orientation = models.CharField(
+        max_length=10,
+        choices=[('none', 'None'), ('portrait', 'Portrait'), ('landscape', 'Landscape')],
+        default='none',
+        help_text='Playback hint: normalize media to this orientation at display time'
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
@@ -296,6 +369,7 @@ class Display(models.Model):
     # Device activation fields
     device_id = models.CharField(max_length=255, unique=True, null=True, blank=True)  # Unique device identifier
     activation_code = models.CharField(max_length=10, unique=True, null=True, blank=True)  # User-friendly activation code
+    activation_code_created_at = models.DateTimeField(null=True, blank=True)
     activation_status = models.CharField(max_length=20, choices=ACTIVATION_STATUS_CHOICES, default='pending')
     last_seen = models.DateTimeField(null=True, blank=True)  # Last time device connected
     device_info = models.JSONField(default=dict, blank=True)  # Store device details (OS, version, etc.)

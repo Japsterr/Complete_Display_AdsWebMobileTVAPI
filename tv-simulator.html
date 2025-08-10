@@ -71,7 +71,7 @@
             margin: 30px 0 20px 0;
         }
         
-        .media-display {
+    .media-display, .video-display {
             width: 100vw;
             height: 100vh;
             object-fit: contain; /* Show full image, scaled to fit */
@@ -80,7 +80,7 @@
             transition: transform 0.3s ease; /* Smooth rotation transition */
         }
         
-        .media-display.landscape-rotated {
+    .media-display.landscape-rotated, .video-display.landscape-rotated {
             transform: rotate(90deg); /* Only rotate landscape images */
         }
         
@@ -138,6 +138,7 @@
             
             <h2>Activation Code:</h2>
             <div id="activation-code" class="activation-code">ABC123</div>
+            <div id="activation-countdown" style="font-size:24px;margin-top:10px;color:#9ecbff;">Expires in: --s</div>
             
             <div class="instructions">
                 <h3>To start displaying ads:</h3>
@@ -156,6 +157,7 @@
         <!-- Player Screen -->
         <div id="player-screen" class="player-screen hidden">
             <img id="media-display" class="media-display" alt="Campaign Media" />
+            <video id="video-display" class="video-display hidden" controls autoplay muted playsinline></video>
             
             <div class="campaign-info">
                 <div id="campaign-name">Test Campaign</div>
@@ -204,7 +206,7 @@
             showScreen('error');
         }
         
-        async function checkActivationStatus() {
+    async function checkActivationStatus() {
             try {
                 const response = await fetch(`${API_BASE}/devices/check-activation/`, {
                     method: 'POST',
@@ -224,7 +226,7 @@
             }
         }
         
-        async function getCurrentCampaign() {
+    async function getCurrentCampaign() {
             try {
                 const response = await fetch(`${API_BASE}/devices/current-campaign/?device_id=${DEVICE_ID}`);
                 
@@ -244,7 +246,7 @@
         }
         
         // Analytics and Tracking Functions
-        async function sendHeartbeat() {
+    async function sendHeartbeat() {
             try {
                 await fetch(`${API_BASE}/analytics/heartbeat/`, {
                     method: 'POST',
@@ -286,7 +288,7 @@
             }
         }
 
-        function displayMedia() {
+    function displayMedia() {
             if (!campaign || !campaign.media_items || campaign.media_items.length === 0) {
                 document.getElementById('media-info').textContent = 'No media available';
                 return;
@@ -307,35 +309,47 @@
             }
             
             const media = campaign.media_items[currentMediaIndex];
-            const mediaElement = document.getElementById('media-display');
+            const imgElement = document.getElementById('media-display');
+            const videoElement = document.getElementById('video-display');
             
             // Use actual media files from the server
-            const imageUrl = API_BASE.replace('/api/v1', '') + media.file_path;
+            const assetUrl = media.file_path; // Already public URL from API
             
-            // Create a temporary image to detect orientation
-            const tempImage = new Image();
-            tempImage.onload = function() {
-                const imageWidth = this.naturalWidth;
-                const imageHeight = this.naturalHeight;
-                const isLandscape = imageWidth > imageHeight;
-                
-                console.log(`Image dimensions: ${imageWidth}x${imageHeight}, Landscape: ${isLandscape}`);
-                
-                // Apply rotation only to landscape images
-                if (isLandscape) {
-                    mediaElement.classList.add('landscape-rotated');
-                    console.log('Applied landscape rotation');
-                } else {
-                    mediaElement.classList.remove('landscape-rotated');
-                    console.log('No rotation needed (portrait/square image)');
-                }
-                
-                // Set the image source after determining orientation
-                mediaElement.src = imageUrl;
-            };
-            
-            // Load the image to detect dimensions
-            tempImage.src = imageUrl;
+            // Orientation hint from server: none | portrait | landscape
+            const normalizeHint = (campaign.normalize_to_orientation || 'none').toLowerCase();
+
+            if (media.media_type === 'video') {
+                // Show video element
+                imgElement.classList.add('hidden');
+                videoElement.classList.remove('hidden');
+                videoElement.src = assetUrl;
+                // Attempt to infer orientation for rotation by metadata is complex; skip rotation for video
+                videoElement.classList.remove('landscape-rotated');
+            } else {
+                // Show image element
+                videoElement.classList.add('hidden');
+                imgElement.classList.remove('hidden');
+                // Create a temporary image to detect orientation
+                const tempImage = new Image();
+                tempImage.onload = function() {
+                    const imageWidth = this.naturalWidth;
+                    const imageHeight = this.naturalHeight;
+                    const isLandscape = imageWidth > imageHeight;
+                    // Apply rotation policy:
+                    // - hint "portrait": rotate if landscape to fit portrait canvas
+                    // - hint "landscape": never rotate
+                    // - hint "none": previous default: rotate only if landscape
+                    if (normalizeHint === 'portrait') {
+                        if (isLandscape) imgElement.classList.add('landscape-rotated'); else imgElement.classList.remove('landscape-rotated');
+                    } else if (normalizeHint === 'landscape') {
+                        imgElement.classList.remove('landscape-rotated');
+                    } else { // none
+                        if (isLandscape) imgElement.classList.add('landscape-rotated'); else imgElement.classList.remove('landscape-rotated');
+                    }
+                    imgElement.src = assetUrl;
+                };
+                tempImage.src = assetUrl;
+            }
             
             // Update info
             document.getElementById('campaign-name').textContent = campaign.campaign_name;
@@ -359,6 +373,44 @@
             }, media.duration * 1000);
         }
         
+        let countdownTimer = null;
+
+        async function requestActivationCode() {
+            try {
+                const response = await fetch(`${API_BASE}/devices/request-activation/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_id: DEVICE_ID,
+                        device_info: {
+                            user_agent: navigator.userAgent,
+                            screen_resolution: `${screen.width}x${screen.height}`
+                        }
+                    })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                // Update UI with code and start countdown
+                document.getElementById('device-id').textContent = DEVICE_ID;
+                document.getElementById('activation-code').textContent = data.activation_code || '------';
+                const countdownEl = document.getElementById('activation-countdown');
+                let remaining = typeof data.expires_in_seconds === 'number' ? data.expires_in_seconds : 900;
+                if (countdownTimer) clearInterval(countdownTimer);
+                countdownEl.textContent = `Expires in: ${remaining}s`;
+                countdownTimer = setInterval(() => {
+                    remaining -= 1;
+                    countdownEl.textContent = `Expires in: ${Math.max(0, remaining)}s`;
+                    if (remaining <= 0) {
+                        clearInterval(countdownTimer);
+                        // Auto-refresh the code
+                        requestActivationCode();
+                    }
+                }, 1000);
+            } catch (err) {
+                console.error('Failed to request activation code', err);
+            }
+        }
+
         async function startPollingActivation() {
             const pollInterval = setInterval(async () => {
                 try {
@@ -461,11 +513,14 @@
                 } else {
                     console.log('Device needs activation');
                     showScreen('activation');
+                    // Ensure a fresh activation code and countdown is shown
+                    await requestActivationCode();
                     startPollingActivation();
                 }
             } catch (error) {
                 console.error('Initialization error:', error);
                 showScreen('activation');
+                await requestActivationCode();
                 startPollingActivation();
             }
         }

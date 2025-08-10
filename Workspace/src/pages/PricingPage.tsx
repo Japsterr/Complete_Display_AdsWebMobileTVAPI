@@ -97,7 +97,7 @@ const PricingPage: React.FC = () => {
   return (
     <div className="pricing-page">
       {/* Hero Section */}
-      <section className="hero-section text-center">
+  <section className="hero-section text-center">
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-8">
@@ -120,7 +120,7 @@ const PricingPage: React.FC = () => {
       </section>
 
       {/* Pricing Cards */}
-      <section className="py-5" style={{background: 'var(--bg-primary)'}}>
+  <section className="py-5" style={{background: '#1a1b1e'}}>
         <div className="container">
           <div className="row g-4 justify-content-center">
             {plans.map((plan, index) => (
@@ -132,16 +132,16 @@ const PricingPage: React.FC = () => {
                     </div>
                   )}
                   <div className="text-center mb-4">
-                    <h3 className="fw-bold text-primary mb-2">{plan.name}</h3>
+                    <h3 className="fw-bold mb-2" style={{ color: '#ff6b35' }}>{plan.name}</h3>
                     <div className="price-display">
                       <span className="price">{plan.price}</span>
                       <span className="period text-secondary">{plan.period}</span>
                     </div>
-                    <p className="text-secondary">{plan.description}</p>
+                    <p style={{ color: '#a8b0b8' }}>{plan.description}</p>
                   </div>
 
                   <div className="features-list mb-4">
-                    <h6 className="fw-bold text-success mb-3">✅ What's Included:</h6>
+                    <h6 className="fw-bold mb-3" style={{ color: '#22c55e' }}>✅ What's Included:</h6>
                     <ul className="list-unstyled">
                       {plan.features.map((feature, idx) => (
                         <li key={idx} className="mb-2">
@@ -156,7 +156,7 @@ const PricingPage: React.FC = () => {
                         <h6 className="fw-bold text-warning mb-3 mt-4">⚠️ Limitations:</h6>
                         <ul className="list-unstyled">
                           {plan.limitations.map((limitation, idx) => (
-                            <li key={idx} className="mb-2 text-secondary">
+                            <li key={idx} className="mb-2" style={{ color: '#a8b0b8' }}>
                               <span className="text-warning me-2">−</span>
                               {limitation}
                             </li>
@@ -182,7 +182,7 @@ const PricingPage: React.FC = () => {
           {/* Value Proposition */}
           <div className="row mt-5">
             <div className="col-12">
-              <div className="card text-center" style={{background: 'var(--primary-gradient)', color: 'white', border: 'none'}}>
+              <div className="card text-center" style={{background: 'linear-gradient(135deg, rgba(255,107,53,0.2) 0%, rgba(255,146,95,0.2) 100%)', color: '#ffd6c5', border: '1px solid rgba(255,107,53,0.25)'}}>
                 <div className="card-body p-5">
                   <h3 className="fw-bold mb-4">🇿🇦 Built for South African Businesses</h3>
                   <div className="row">
@@ -215,13 +215,13 @@ const PricingPage: React.FC = () => {
       </section>
 
       {/* Comparison Table */}
-      <section className="py-5" style={{background: 'var(--bg-secondary)'}}>
+  <section className="py-5" style={{background: '#1e1f22', borderTop: '1px solid rgba(255,107,53,0.12)', borderBottom: '1px solid rgba(255,107,53,0.12)'}}>
         <div className="container">
           <div className="text-center mb-5">
-            <h2 className="display-4 fw-bold text-primary mb-3">
+            <h2 className="display-4 fw-bold mb-3" style={{ color: '#ff6b35' }}>
               Feature Comparison
             </h2>
-            <p className="lead text-secondary">
+            <p className="lead" style={{ color: '#a8b0b8' }}>
               See exactly what's included in each plan
             </p>
           </div>
@@ -310,7 +310,7 @@ const PricingPage: React.FC = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-5" style={{background: 'var(--bg-primary)'}}>
+  <section className="py-5" style={{background: '#1a1b1e'}}>
         <div className="container">
           <div className="text-center mb-5">
             <h2 className="display-4 fw-bold text-primary mb-3">
@@ -351,8 +351,8 @@ const PricingPage: React.FC = () => {
       </section>
 
       {/* Call to Action */}
-      <section className="py-5" style={{background: 'var(--secondary-gradient)'}}>
-        <div className="container text-center text-white">
+      <section className="py-5" style={{background: 'linear-gradient(135deg, rgba(255,107,53,0.2) 0%, rgba(255,146,95,0.15) 100%)', borderTop: '1px solid rgba(255,107,53,0.25)'}}>
+        <div className="container text-center" style={{ color: '#ffd6c5' }}>
           <div className="row justify-content-center">
             <div className="col-lg-8">
               <h2 className="display-4 fw-bold mb-3">
@@ -363,12 +363,8 @@ const PricingPage: React.FC = () => {
                 No contracts, no setup fees, cancel anytime.
               </p>
               <div className="d-flex justify-content-center gap-3 flex-wrap">
-                <Link to="/register" className="btn btn-light btn-lg px-5">
-                  <strong>Start Free Trial</strong>
-                </Link>
-                <Link to="/contact" className="btn btn-outline-light btn-lg px-5">
-                  Contact Sales
-                </Link>
+                <Link to="/register" className="btn btn-primary btn-lg px-5" style={{ color: '#1a1b1e' }}><strong>Start Free Trial</strong></Link>
+                <Link to="/contact" className="btn btn-outline-light btn-lg px-5">Contact Sales</Link>
               </div>
               <p className="mt-4 opacity-75">
                 <small>✨ All plans include 14-day free trial • Cancel anytime • No credit card required for Free plan</small>

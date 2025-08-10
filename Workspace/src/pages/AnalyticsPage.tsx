@@ -8,6 +8,7 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
+import { LineChart, Line, Tooltip, ResponsiveContainer, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface DeviceStatus {
   display_id: number;
@@ -64,11 +65,28 @@ const AnalyticsPage = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<{ uptime: any[]; impressions_timeseries_24h: { timestamp: string; count: number }[]; top_media_7d: any[] } | null>(null);
+  const [range, setRange] = useState<'24h' | '7d' | '30d'>('24h');
+  const [campaignBreakdown, setCampaignBreakdown] = useState<{ start: string; end: string; campaigns: { campaign_id: number; campaign_name: string; total_impressions: number; total_duration: number; unique_displays: number; top_media: { media: string; total_impressions: number; total_duration: number }[] }[] } | null>(null);
+
+  const computeWindow = () => {
+    const end = new Date();
+    const start = new Date(end);
+    if (range === '24h') start.setHours(end.getHours() - 24);
+    else if (range === '7d') start.setDate(end.getDate() - 7);
+    else start.setDate(end.getDate() - 30);
+    return { start: start.toISOString(), end: end.toISOString(), granularity: range === '24h' ? 'hour' : 'day' };
+  };
 
   const fetchAnalytics = async () => {
     try {
       const response = await api.get('/analytics/dashboard/');
       setAnalyticsData(response.data);
+      const { start, end, granularity } = computeWindow();
+      const summaryRes = await api.get(`/analytics/summary/?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&granularity=${granularity}`);
+      setSummary(summaryRes.data);
+      const breakdownRes = await api.get(`/analytics/campaign-breakdown/?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+      setCampaignBreakdown(breakdownRes.data);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch analytics data');
@@ -81,7 +99,7 @@ const AnalyticsPage = () => {
     fetchAnalytics();
     const interval = setInterval(fetchAnalytics, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [range]);
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -210,7 +228,7 @@ const AnalyticsPage = () => {
     return (
       <div className="container-fluid py-4">
         <div className="d-flex justify-content-center py-5">
-          <div className="spinner-border text-primary" role="status">
+          <div className="spinner-border" role="status" style={{ color: '#ff6b35' }}>
             <span className="visually-hidden">Loading...</span>
           </div>
         </div>
@@ -255,10 +273,25 @@ const AnalyticsPage = () => {
           <h1 className="h3 mb-1">Analytics Dashboard</h1>
           <p className="text-muted mb-0">Overview of your digital signage performance</p>
         </div>
-        <button className="btn btn-outline-primary" onClick={fetchAnalytics}>
-          <CalendarIcon style={{ width: '16px', height: '16px' }} className="me-2" />
-          Refresh
-        </button>
+        <div className="d-flex align-items-center gap-2">
+          <div className="btn-group me-3" role="group" aria-label="Time range">
+            <button className={`btn btn-sm ${range==='24h' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setRange('24h')}>24h</button>
+            <button className={`btn btn-sm ${range==='7d' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setRange('7d')}>7d</button>
+            <button className={`btn btn-sm ${range==='30d' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setRange('30d')}>30d</button>
+          </div>
+          <div className="btn-group">
+          <button className="btn btn-outline-primary" onClick={fetchAnalytics}>
+            <CalendarIcon style={{ width: '16px', height: '16px' }} className="me-2" />
+            Refresh
+          </button>
+          <a className="btn btn-outline-secondary" href={`${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1/') + 'analytics/export/impressions.csv'}?start=${encodeURIComponent(computeWindow().start)}&end=${encodeURIComponent(computeWindow().end)}`} target="_blank" rel="noreferrer">
+            Export Impressions CSV
+          </a>
+          <a className="btn btn-outline-secondary" href={`${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1/') + 'analytics/export/devices.csv'}?start=${encodeURIComponent(computeWindow().start)}&end=${encodeURIComponent(computeWindow().end)}`} target="_blank" rel="noreferrer">
+            Export Devices CSV
+          </a>
+        </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -268,8 +301,8 @@ const AnalyticsPage = () => {
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="flex-shrink-0">
-                  <div className="bg-primary bg-opacity-10 rounded-circle p-3">
-                    <TvIcon style={{ width: '24px', height: '24px' }} className="text-primary" />
+                  <div className="rounded-circle p-3" style={{ background: 'rgba(255,107,53,0.1)' }}>
+                    <TvIcon style={{ width: '24px', height: '24px', color: '#ff6b35' }} />
                   </div>
                 </div>
                 <div className="flex-grow-1 ms-3">
@@ -342,7 +375,7 @@ const AnalyticsPage = () => {
         </div>
       </div>
 
-      {/* Content Summary */}
+  {/* Content Summary */}
       <div className="row g-4 mb-4">
         <div className="col-lg-8">
           <div className="card">
@@ -378,7 +411,7 @@ const AnalyticsPage = () => {
                             <small className="text-muted">Last played: {formatDateTime(item.last_played)}</small>
                           </td>
                           <td className="px-3 py-3">
-                            <span className="badge bg-primary text-white">
+                            <span className="badge text-white" style={{ background: 'linear-gradient(135deg, #ff6b35 0%, #ff925f 100%)' }}>
                               {item.campaign}
                             </span>
                           </td>
@@ -440,6 +473,125 @@ const AnalyticsPage = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Time Series & Uptime */}
+      <div className="row g-4 mb-4">
+        <div className="col-lg-8">
+          <div className="card">
+            <div className="card-header bg-white">
+              <h5 className="card-title mb-0">Impressions ({range})</h5>
+            </div>
+            <div className="card-body">
+              {!summary?.impressions_timeseries_24h?.length ? (
+                <div className="text-muted">No data</div>
+              ) : (
+                <div style={{ width: '100%', height: 260 }}>
+                  <ResponsiveContainer>
+                    <LineChart data={summary.impressions_timeseries_24h} margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="timestamp" tickFormatter={(t: string) => {
+                        const d = new Date(t);
+                        return range === '24h' ? `${d.getHours()}:00` : `${d.getMonth()+1}/${d.getDate()}`;
+                      }} interval={range==='24h' ? 2 : 0} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip labelFormatter={(t: string) => new Date(t).toLocaleString()} />
+                      <Line type="monotone" dataKey="count" stroke="#ff6b35" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-4">
+          <div className="card">
+            <div className="card-header bg-white">
+              <h5 className="card-title mb-0">Uptime (24h)</h5>
+            </div>
+            <div className="card-body">
+              {!summary?.uptime?.length ? (
+                <div className="text-muted">No devices</div>
+              ) : (
+                <ul className="list-unstyled mb-0">
+                  {summary.uptime.slice(0, 8).map((u, idx) => (
+                    <li key={idx} className="d-flex justify-content-between border-bottom py-1">
+                      <span>{u.name}</span>
+                      <span>{u.uptime_24h_percent}%</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <hr />
+              <div>
+                <h6 className="mb-2">Top Media (7d)</h6>
+                {!summary?.top_media_7d?.length ? (
+                  <div className="text-muted">No data</div>
+                ) : (
+                  <ul className="list-unstyled small mb-0">
+                    {summary.top_media_7d.slice(0, 6).map((m, i) => (
+                      <li key={i} className="d-flex justify-content-between py-1">
+                        <span className="text-truncate" style={{ maxWidth: 160 }} title={`${m.media} • ${m.campaign}`}>{m.media}</span>
+                        <span className="text-muted">{m.total_impressions}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Campaign Breakdown */}
+      <div className="row g-4 mb-4">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-header bg-white">
+              <h5 className="card-title mb-0">Campaign Breakdown ({range})</h5>
+            </div>
+            <div className="card-body p-0">
+              {!campaignBreakdown?.campaigns?.length ? (
+                <div className="text-center py-5 text-muted">No campaign data</div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th className="px-4 py-3">Campaign</th>
+                        <th className="px-3 py-3 text-center">Impressions</th>
+                        <th className="px-3 py-3 text-center">Unique Displays</th>
+                        <th className="px-3 py-3 text-center">Total Time</th>
+                        <th className="px-3 py-3">Top Media</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {campaignBreakdown.campaigns.map((c) => (
+                        <tr key={c.campaign_id}>
+                          <td className="px-4 py-3">
+                            <div className="fw-semibold">{c.campaign_name}</div>
+                          </td>
+                          <td className="px-3 py-3 text-center">{c.total_impressions.toLocaleString()}</td>
+                          <td className="px-3 py-3 text-center">{c.unique_displays}</td>
+                          <td className="px-3 py-3 text-center">{formatDuration(c.total_duration)}</td>
+                          <td className="px-3 py-3">
+                            <div className="d-flex flex-wrap gap-2">
+                              {c.top_media.slice(0,4).map((m, idx) => (
+                                <span key={idx} className="badge text-white" style={{ background: 'linear-gradient(135deg, #ff6b35 0%, #ff925f 100%)' }}>
+                                  {m.media}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

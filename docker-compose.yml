@@ -1,4 +1,5 @@
-version: '3.8'
+version: "3.8"
+
 services:
   postgres:
     image: postgres:15
@@ -27,6 +28,11 @@ services:
       - DJANGO_DB_NAME=displayads
       - DJANGO_DB_USER=displayadsuser
       - DJANGO_DB_PASSWORD=displayadspass
+      - DJANGO_DEBUG=True
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - MINIO_PUBLIC_ENDPOINT=http://localhost:9000
+      - MINIO_ENDPOINT_URL=http://minio:9000
+      - MINIO_BUCKET_NAME=media
 
   frontend:
     build: ./Workspace
@@ -48,6 +54,41 @@ services:
     volumes:
       - minio_data:/data
     restart: always
+
+  # One-off init job to create the media bucket and allow anonymous download (public read)
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      mc alias set local http://minio:9000 minioadmin minioadmin
+      echo 'Waiting for MinIO...'
+      until mc ls local >/dev/null 2>&1; do sleep 1; done
+      mc mb -p local/media || true
+      mc anonymous set download local/media || true
+      cat > /tmp/cors.json <<'EOF'
+      [
+        {
+          "AllowedMethod": ["GET", "HEAD"],
+          "AllowedOrigin": [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+            "http://localhost:5175",
+            "http://127.0.0.1:5175",
+            "http://localhost:8000"
+          ],
+          "AllowedHeader": ["*"],
+          "ExposeHeader": ["ETag"],
+          "MaxAgeSeconds": 3000
+        }
+      ]
+      EOF
+      mc cors set local/media /tmp/cors.json || true
+      echo 'MinIO media bucket ensured with public read + CORS.'
+    restart: "no"
 
 volumes:
   postgres_data:

@@ -141,19 +141,20 @@
 
 ### **Phase 1: Video Support Implementation** ⏱️ ~2.5 hours
 **Priority**: High - Key feature for paid tiers
-- [ ] **Backend**: Add video file type validation and media_type field
-- [ ] **TV Simulator**: HTML5 video element with orientation detection
-- [ ] **Web Dashboard**: Video upload and preview functionality
+- [x] **Backend**: Add video file type validation and media_type field (auto-detected on upload)
+- [x] **TV Simulator**: HTML5 video element playback added
+- [x] **Web Dashboard**: Video upload and preview functionality (Media Library + Campaign Editor)
 - [ ] **Mobile App**: Video playback in media management
-- [ ] **Testing**: Video format compatibility across platforms
+- [x] **Testing**: Basic upload/playback verified; formats: mp4/webm/ogg accepted
 
-### **Phase 2: Plan Enforcement & Limitations** ⏱️ ~4 hours
-**Priority**: High - Required for monetization
-- [ ] **Backend Validation**: Enforce campaign/display/media limits per plan
-- [ ] **Frontend Restrictions**: UI limitations based on user's plan
-- [ ] **Upgrade Prompts**: Encourage users to upgrade when limits reached
-- [ ] **Storage Monitoring**: Track and enforce storage usage per plan
-- [ ] **Feature Gating**: Video support only for paid plans
+### **Phase 2: Orientation Policy + Activation Hardening** ⏱️ ~2 hours
+**Priority**: High - Completes device activation UX and consistency
+- [x] Add Campaign.normalize_to_orientation (none|portrait|landscape)
+- [x] Add Display.activation_code_created_at and TTL enforcement (15 min)
+- [x] Throttle activation endpoints to reduce abuse
+- [x] Include normalize_to_orientation in device campaign payload
+- [ ] Frontend/Mobile: show countdown and refresh expired code
+- [ ] Optional: Client honors normalize_to_orientation hint at playback time
 
 ### **Phase 3: Advanced Analytics Dashboard** ⏱️ ~6 hours
 **Priority**: Medium - Professional feature differentiation

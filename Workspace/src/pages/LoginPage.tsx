@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
+import { Box, Button, Container, Heading, Input, Text, VStack, HStack } from "@chakra-ui/react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -8,6 +9,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  // no toast in this minimal setup
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,137 +24,87 @@ export default function LoginPage() {
       navigate("/dashboard");
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.response?.data?.detail || "Invalid credentials. Please try again.");
+  const msg = err.response?.data?.detail || "Invalid credentials. Please try again.";
+      setError(msg);
+  // could add toast here if needed
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-vh-100 d-flex align-items-center" style={{background: 'var(--bg-primary)'}}>
-      <div className="container">
-        <div className="row justify-content-center">
-          <div className="col-md-6 col-lg-5">
-            <div className="card shadow-lg border-0" style={{borderRadius: 'var(--radius-xl)'}}>
-              <div className="card-body p-5">
-                {/* Header */}
-                <div className="text-center mb-4">
-                  <div className="mb-3">
-                    <div className="feature-icon mx-auto" style={{width: '80px', height: '80px'}}>
-                      📱
-                    </div>
-                  </div>
-                  <h2 className="fw-bold text-primary mb-3">
-                    Welcome Back to DisplayAds
-                  </h2>
-                  <p className="text-secondary">
-                    Sign in to manage your digital signage campaigns
-                  </p>
-                </div>
+    <Box minH="100vh" bg="#1a1b1e" display="flex" alignItems="center" py={16}>
+      <Container maxW="lg">
+        <VStack spacing={8} align="stretch">
+          <VStack spacing={2} textAlign="center">
+            <Box fontSize="5xl">📱</Box>
+            <Heading size="lg" color="brand.500">Welcome back</Heading>
+            <Text color="gray.400">Sign in to manage your digital signage campaigns</Text>
+          </VStack>
 
-                {error && (
-                  <div className="alert alert-danger d-flex align-items-center" role="alert">
-                    <div>
-                      <strong>Sign In Failed:</strong> {error}
-                    </div>
-                  </div>
-                )}
+          <Box
+            bg="#222325"
+            p={8}
+            borderRadius="2xl"
+            boxShadow="0 0 0 1px rgba(255,107,53,0.25), 0 10px 40px rgba(0,0,0,0.4)"
+          >
+            {error && (
+              <Box bg="red.900" color="red.200" borderRadius="md" p={3} mb={4}>
+                <strong>Sign In Failed:</strong> {error}
+              </Box>
+            )}
 
-                <form onSubmit={handleSubmit}>
-                  <div className="mb-3">
-                    <label htmlFor="email" className="form-label">
-                      Email Address
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      className="form-control"
-                      placeholder="Enter your email"
-                      autoComplete="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
+      <VStack as="form" onSubmit={handleSubmit} spacing={5} align="stretch">
+        <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  borderColor="rgba(255,107,53,0.35)"
+                  _hover={{ borderColor: 'brand.500' }}
+                  _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(255,107,53,0.15)' }}
+                  bg="#1c1d20"
+                />
+              
+        <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                  borderColor="rgba(255,107,53,0.35)"
+                  _hover={{ borderColor: 'brand.500' }}
+                  _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 3px rgba(255,107,53,0.15)' }}
+                  bg="#1c1d20"
+                />
 
-                  <div className="mb-4">
-                    <label htmlFor="password" className="form-label">
-                      Password
-                    </label>
-                    <input
-                      id="password"
-                      name="password"
-                      type="password"
-                      required
-                      className="form-control"
-                      placeholder="Enter your password"
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
+              <Button type="submit" isLoading={loading} size="lg" colorScheme="orange">
+                🚀 Sign In
+              </Button>
+            </VStack>
 
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary w-100 py-3 fw-semibold"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Signing in...
-                      </>
-                    ) : (
-                      <>
-                        🚀 Sign In
-                      </>
-                    )}
-                  </button>
-                </form>
-
-                {/* Sign Up Link */}
-                <div className="text-center mt-4">
-                  <p className="text-secondary mb-0">
-                    Don't have an account?{' '}
-                    <Link
-                      to="/register"
-                      className="text-primary fw-semibold text-decoration-none"
-                    >
-                      Create account here
-                    </Link>
-                  </p>
-                </div>
-
-                {/* Quick Features */}
-                <div className="mt-4 pt-4 border-top">
-                  <div className="row text-center g-3">
-                    <div className="col-4">
-                      <div className="text-primary mb-1">📱</div>
-                      <small className="text-secondary">QR Activation</small>
-                    </div>
-                    <div className="col-4">
-                      <div className="text-primary mb-1">📊</div>
-                      <small className="text-secondary">Real-time Analytics</small>
-                    </div>
-                    <div className="col-4">
-                      <div className="text-primary mb-1">🌐</div>
-                      <small className="text-secondary">Cloud Dashboard</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Security Info */}
-            <div className="text-center mt-4">
-              <p className="text-secondary mb-0">
-                <small>🔒 Secure login • 🌍 Access from anywhere • 📱 Mobile optimized</small>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <Box h="1px" bg="rgba(255,107,53,0.2)" my={6} />
+            <HStack justify="space-between" color="gray.400" fontSize="sm">
+              <HStack spacing={6}>
+                <Text>🔒 Secure login</Text>
+                <Text>🌍 Access anywhere</Text>
+                <Text>📱 Mobile ready</Text>
+              </HStack>
+              <Text>
+                Don't have an account?{' '}
+                <Box as={Link} to="/register" color="brand.400" _hover={{ color: 'brand.300', textDecoration: 'underline' }}>
+                  Create one
+                </Box>
+              </Text>
+            </HStack>
+          </Box>
+        </VStack>
+      </Container>
+    </Box>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCampaigns, assignCampaignToDisplay, fetchDisplays } from '../services/api';
+import { fetchCampaigns, assignCampaignToDisplay, fetchDisplays, requestActivationCode } from '../services/api';
 import type { Campaign, Display } from '../services/api';
 import api from '../services/api';
 
@@ -12,6 +12,10 @@ const DisplayManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+  const [tvDeviceId, setTvDeviceId] = useState('TV-TEST-001');
+  const [activationInfo, setActivationInfo] = useState<{ code?: string; expires?: number | null; status?: string }>({});
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -80,6 +84,33 @@ const DisplayManagementPage: React.FC = () => {
     setMessage(text);
     setMessageType(type);
     setTimeout(() => setMessage(''), 5000);
+  };
+
+  const loadActivationCode = async () => {
+    try {
+      const res = await requestActivationCode(tvDeviceId, { source: 'web-dashboard' });
+      const expires = typeof res.expires_in_seconds === 'number' ? res.expires_in_seconds : null;
+      setActivationInfo({ code: res.activation_code, expires, status: res.status });
+      if (countdownTimer) window.clearInterval(countdownTimer);
+      if (expires !== null) {
+        setCountdown(expires);
+        const id = window.setInterval(() => {
+          setCountdown(prev => {
+            const next = prev !== null ? Math.max(0, prev - 1) : null;
+            if (next === 0) {
+              window.clearInterval(id);
+              loadActivationCode();
+            }
+            return next;
+          });
+        }, 1000);
+        setCountdownTimer(id);
+      } else {
+        setCountdown(null);
+      }
+    } catch (e) {
+      showMessage('Failed to request activation code', 'error');
+    }
   };
 
   return (
@@ -197,6 +228,28 @@ const DisplayManagementPage: React.FC = () => {
                   <strong>Start Using:</strong> Your TV will automatically start displaying your content!
                 </li>
               </ol>
+              <hr />
+              <div className="row g-2 align-items-end">
+                <div className="col-sm-6">
+                  <label className="form-label">Device ID (from TV)</label>
+                  <input className="form-control" value={tvDeviceId} onChange={e=>setTvDeviceId(e.target.value)} placeholder="TV-TEST-001" />
+                </div>
+                <div className="col-sm-3">
+                  <button className="btn btn-outline-primary w-100" onClick={loadActivationCode}>Get Code</button>
+                </div>
+                <div className="col-sm-3">
+                  <div className="text-end small text-muted">
+                    {activationInfo.code ? (
+                      <>
+                        <div><strong>Code:</strong> <span style={{fontFamily:'monospace'}}>{activationInfo.code}</span></div>
+                        {countdown !== null && <div>Expires in: {countdown}s</div>}
+                      </>
+                    ) : (
+                      <div>—</div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

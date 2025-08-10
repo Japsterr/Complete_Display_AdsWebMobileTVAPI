@@ -62,7 +62,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
     : 'Loading...';
 
   return (
-    <header className="header-main bg-primary py-3 shadow-sm">
+    <header className="header-main py-3 shadow-sm" style={{ backgroundColor: '#1a1b1e', borderBottom: '1px solid rgba(255,107,53,0.25)' }}>
       <div className="container-fluid">
         <div className="d-flex align-items-center justify-content-between">
           {/* Left: Mobile menu + Logo */}
@@ -85,8 +85,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
               onClick={handleLogoClick}
             >
               <div className="d-flex align-items-center">
-                <div className="bg-white rounded-circle p-2 me-3 shadow-sm">
-                  <TvIcon style={{ width: "24px", height: "24px" }} className="text-primary" />
+                <div className="rounded-circle p-2 me-3 shadow-sm" style={{ background: 'linear-gradient(135deg, #ff6b35 0%, #ff925f 100%)' }}>
+                  <TvIcon style={{ width: "24px", height: "24px", color: '#1a1b1e' }} />
                 </div>
                 <div className="text-white">
                   <div className="fw-bold" style={{ fontSize: "1.25rem", lineHeight: "1.2" }}>

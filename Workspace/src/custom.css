@@ -1,10 +1,13 @@
 /* 🎨 DisplayAds Modern Theme - Professional Digital Signage Colors */
 
 :root {
+  /* Map Bootstrap primary to brand */
+  --bs-primary: #ff6b35;
+  --bs-primary-rgb: 255, 107, 53;
   /* Primary Brand Colors - Digital Blue Gradient */
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --primary-dark: #4c51bf;
-  --primary-light: #a5b4fc;
+  --primary-gradient: linear-gradient(135deg, #ff6b35 0%, #ff925f 100%);
+  --primary-dark: #ff6b35;
+  --primary-light: #ff9a76;
   
   /* Secondary Colors - Digital Signage Orange */
   --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -20,15 +23,15 @@
   --warning-color: #f59e0b;
   
   /* Background Colors - Modern Grays */
-  --bg-primary: #f8fafc;
-  --bg-secondary: #e2e8f0;
-  --bg-dark: #1e293b;
-  --bg-card: #ffffff;
+  --bg-primary: #1a1b1e;
+  --bg-secondary: #1e1f22;
+  --bg-dark: #0f1113;
+  --bg-card: #222325;
   
   /* Text Colors */
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-light: #94a3b8;
+  --text-primary: #e6e1e3;
+  --text-secondary: #a8b0b8;
+  --text-light: #a8b0b8;
   --text-white: #ffffff;
   
   /* Shadows */
@@ -98,10 +101,7 @@
 
 /* Navbar Styling */
 .navbar {
-  background: var(--bg-card) !important;
   backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-sm);
-  border-bottom: 1px solid var(--bg-secondary);
 }
 
 .navbar-brand {
@@ -114,7 +114,7 @@
 }
 
 .navbar-nav .nav-link {
-  color: var(--text-primary) !important;
+  color: var(--text-secondary) !important;
   font-weight: 500;
   transition: color 0.2s ease;
 }
@@ -127,7 +127,7 @@
 .sidebar {
   background: var(--bg-card);
   box-shadow: var(--shadow-md);
-  border-right: 1px solid var(--bg-secondary);
+  border-right: 1px solid rgba(255, 107, 53, 0.25);
 }
 
 .sidebar .nav-link {
@@ -224,8 +224,8 @@
 }
 
 .table thead th {
-  background: var(--primary-gradient);
-  color: var(--text-white);
+  background: #2a2b2f;
+  color: #ffd6c5;
   font-weight: 600;
   border: none;
   padding: 1rem;
@@ -372,7 +372,8 @@ body {
 
 /* Hero Section */
 .hero-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: radial-gradient(1200px 600px at 10% -20%, rgba(255, 107, 53, 0.12), transparent 60%),
+              linear-gradient(180deg, #1a1b1e 0%, #1e1f22 100%);
   color: var(--text-white);
   padding: 6rem 0;
 }
@@ -509,4 +510,93 @@ body {
   font-weight: 600;
   display: inline-block;
   margin-bottom: 1rem;
+}
+
+/* Dark theme for public pages */
+.public-dark {
+  background-color: #1a1b1e;
+  color: #e6e1e3;
+}
+
+.public-dark a {
+  color: #ff9a76;
+}
+
+.public-dark .text-primary {
+  color: #ff6b35 !important;
+}
+
+.public-dark .hero-section {
+  background: radial-gradient(1200px 600px at 10% -20%, rgba(255, 107, 53, 0.12), transparent 60%),
+              linear-gradient(180deg, #1a1b1e 0%, #1e1f22 100%);
+  color: #e6e1e3;
+}
+
+.public-dark .feature-card,
+.public-dark .card {
+  background: #222325;
+  color: #e6e1e3;
+  border: 1px solid rgba(255, 107, 53, 0.12);
+}
+
+.public-dark .card-header {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.25) 0%, rgba(255, 146, 95, 0.2) 100%);
+  color: #ffd6c5;
+}
+
+.public-dark .feature-icon {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff925f 100%);
+  color: #1a1b1e;
+}
+
+.public-dark .text-secondary {
+  color: #a8b0b8 !important;
+}
+
+.public-dark .badge.bg-primary {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff925f 100%) !important;
+}
+
+.public-dark .btn-primary {
+  background-color: #ff6b35 !important;
+  border-color: #ff6b35 !important;
+  color: #1a1b1e !important;
+}
+
+.public-dark .btn-primary:hover {
+  background-color: #ff814f !important;
+  border-color: #ff814f !important;
+}
+
+.public-dark .btn-outline-light {
+  border-color: rgba(255, 107, 53, 0.45) !important;
+  color: #ffb199 !important;
+}
+
+.public-dark .btn-outline-light:hover {
+  background-color: rgba(255, 107, 53, 0.12) !important;
+  color: #ffd6c5 !important;
+}
+
+.public-dark .table {
+  background: #222325;
+  color: #e6e1e3;
+}
+
+.public-dark .table thead th {
+  background: #2a2b2f;
+  color: #ffd6c5;
+  border-bottom: 1px solid rgba(255, 107, 53, 0.25);
+}
+
+.public-dark .accordion-item,
+.public-dark .accordion-button,
+.public-dark .accordion-body {
+  background: #222325;
+  color: #e6e1e3;
+}
+
+.public-dark .accordion-button:not(.collapsed) {
+  color: #ffd6c5;
+  background-color: rgba(255, 107, 53, 0.08);
 }

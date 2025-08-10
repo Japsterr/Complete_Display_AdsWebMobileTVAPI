@@ -6,6 +6,7 @@ import UploadModal from "../components/UploadModal.tsx";
 type Media = {
   media_id: number;
   file: string;
+  media_type?: 'image' | 'video';
   name: string;
   description?: string;
   uploaded_at: string;
@@ -22,6 +23,34 @@ export default function MediaLibraryPage() {
   const [media, setMedia] = useState<Media[]>([]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<Media | null>(null);
+
+  const PUBLIC_MINIO = (import.meta as any).env?.VITE_MINIO_PUBLIC_ENDPOINT || "http://localhost:9000";
+  const MINIO_BUCKET = (import.meta as any).env?.VITE_MINIO_BUCKET_NAME || "media";
+
+  const toAbsoluteUrl = (item: Media): string => {
+    // Prefer server-provided absolute URL
+    if (item.file_url && /^(http|https):\/\//i.test(item.file_url)) return item.file_url;
+    // Handle 'file' being absolute but pointing to internal host (minio)
+    if (item.file && /^(http|https):\/\//i.test(item.file)) {
+      try {
+        const u = new URL(item.file);
+        // Rewrite internal docker hostname to public endpoint
+        if (PUBLIC_MINIO) {
+          const base = new URL(PUBLIC_MINIO);
+          return `${base.origin}${u.pathname}`;
+        }
+        return item.file;
+      } catch {
+        // fallthrough
+      }
+    }
+    // If we have only a path or filename, construct public URL
+    const path = (item.file || item.file_url || item.thumbnail_url || item.url || "").replace(/^\/+/, "");
+    if (!path) return "/placeholder-image.png";
+    // Remove leading bucket if present to avoid duplication
+    const cleaned = path.startsWith(`${MINIO_BUCKET}/`) ? path.slice(MINIO_BUCKET.length + 1) : path;
+    return `${PUBLIC_MINIO.replace(/\/$/, "")}/${MINIO_BUCKET}/${cleaned}`;
+  };
 
   const handlePreview = (mediaItem: Media) => {
     setPreviewMedia(mediaItem);
@@ -110,30 +139,40 @@ export default function MediaLibraryPage() {
             <div key={item.media_id} className="col-sm-6 col-md-4 col-lg-3">
               <div className="card h-100">
                 <div className="position-relative" style={{ paddingBottom: "56.25%" }}>
-                  <img 
-                    src={item.file_url || item.file || item.thumbnail_url || item.url || '/placeholder-image.png'} 
-                    alt={item.name || item.file_name} 
-                    className="card-img-top position-absolute w-100 h-100"
-                    style={{ objectFit: 'cover' }}
-                    onError={(e) => {
-                      console.log("Image failed to load:", item);
-                      // Show a placeholder or gray background on error
-                      const img = e.target as HTMLImageElement;
-                      img.style.display = 'none';
-                      const parent = img.parentElement;
-                      if (parent) {
-                        parent.style.backgroundColor = '#f8f9fa';
-                        parent.innerHTML = `
-                          <div class="d-flex align-items-center justify-content-center h-100">
-                            <div class="text-center text-muted">
-                              <div style="font-size: 2rem;">📁</div>
-                              <small>No Preview</small>
+                  {item.media_type === 'video' ? (
+                    <video
+                      className="position-absolute w-100 h-100"
+                      style={{ objectFit: 'cover' }}
+                      src={toAbsoluteUrl(item)}
+                      muted
+                      playsInline
+                      controls
+                    />
+                  ) : (
+                    <img 
+                      src={toAbsoluteUrl(item)} 
+                      alt={item.name || item.file_name} 
+                      className="card-img-top position-absolute w-100 h-100"
+                      style={{ objectFit: 'cover' }}
+                      onError={(e) => {
+                        console.log("Image failed to load:", item);
+                        const img = e.target as HTMLImageElement;
+                        img.style.display = 'none';
+                        const parent = img.parentElement;
+                        if (parent) {
+                          parent.style.backgroundColor = '#f8f9fa';
+                          parent.innerHTML = `
+                            <div class="d-flex align-items-center justify-content-center h-100">
+                              <div class="text-center text-muted">
+                                <div style="font-size: 2rem;">📁</div>
+                                <small>No Preview</small>
+                              </div>
                             </div>
-                          </div>
-                        `;
-                      }
-                    }}
-                  />
+                          `;
+                        }
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="card-body">
                   <h6 className="card-title text-truncate" title={item.name || item.file_name}>
@@ -193,12 +232,24 @@ export default function MediaLibraryPage() {
                 ></button>
               </div>
               <div className="modal-body text-center">
-                <img 
-                  src={previewMedia.file_url || previewMedia.file || previewMedia.thumbnail_url || previewMedia.url || '/placeholder-image.png'} 
-                  alt={previewMedia.name}
-                  className="img-fluid"
-                  style={{ maxHeight: '70vh' }}
-                />
+                {previewMedia.media_type === 'video' ? (
+                  <video 
+                    src={toAbsoluteUrl(previewMedia)} 
+                    className="img-fluid"
+                    style={{ maxHeight: '70vh' }}
+                    controls
+                    autoPlay
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <img 
+                    src={toAbsoluteUrl(previewMedia)} 
+                    alt={previewMedia.name}
+                    className="img-fluid"
+                    style={{ maxHeight: '70vh' }}
+                  />
+                )}
                 <div className="mt-3">
                   <p className="text-muted mb-1">
                     <strong>File:</strong> {previewMedia.name}

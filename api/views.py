@@ -1,13 +1,79 @@
+from rest_framework import viewsets
+from .models import DisplayGroup, Tag, MediaApproval
+from .serializers import DisplayGroupSerializer, TagSerializer, MediaApprovalSerializer
+from rest_framework import permissions
+
+# --- Display Grouping, Tagging, and Moderation ViewSets ---
+class DisplayGroupViewSet(viewsets.ModelViewSet):
+    queryset = DisplayGroup.objects.all()
+    serializer_class = DisplayGroupSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+class TagViewSet(viewsets.ModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+class MediaApprovalViewSet(viewsets.ModelViewSet):
+    queryset = MediaApproval.objects.all()
+    serializer_class = MediaApprovalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+# Organization & User Management API Views
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
+from .models import Organization, Membership, Invitation, AuditLog
+from .serializers import OrganizationSerializer, MembershipSerializer, InvitationSerializer, AuditLogSerializer
+
+class OrganizationViewSet(viewsets.ModelViewSet):
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+class MembershipViewSet(viewsets.ModelViewSet):
+    queryset = Membership.objects.all()
+    serializer_class = MembershipSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+class InvitationViewSet(viewsets.ModelViewSet):
+    queryset = Invitation.objects.all()
+    serializer_class = InvitationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+class AuditLogViewSet(viewsets.ModelViewSet):
+    queryset = AuditLog.objects.all()
+    serializer_class = AuditLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Automatically set the user to the current user if not provided
+        if not serializer.validated_data.get('user'):
+            serializer.save(user=self.request.user)
+        else:
+            serializer.save()
+# Healthcheck endpoint
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+@api_view(["GET"])
+def healthcheck(request):
+    return Response({"status": "ok"})
 from rest_framework import generics, viewsets, permissions, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 import random
 import string
+from datetime import timedelta
 from .models import (
     Campaign, Media, Display, UserProfile, BusinessMember, 
     Schedule, RefreshToken as CustomRefreshToken, User, CampaignMedia,
@@ -19,6 +85,19 @@ from .serializers import (
     CampaignMediaSerializer
 )
 from .permissions import IsOwnerOrBusinessMember
+from .utils import normalize_image_to_orientation, generate_activation_qr
+
+# --- Throttling for activation endpoints ---
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+
+class ActivationAnonThrottle(AnonRateThrottle):
+    rate = '20/min'
+
+class ActivationUserThrottle(UserRateThrottle):
+    rate = '60/min'
+
+class ActivationAuthThrottle(UserRateThrottle):
+    rate = '30/min'
 
 # Health check endpoint for mobile app
 @api_view(['GET'])
@@ -303,14 +382,10 @@ class LogoutView(APIView):
         token = request.data.get('refresh')
         if not token:
             return Response({'detail': 'No refresh token provided.'}, status=400)
-        
         try:
-            # Add token to blacklist by creating a RefreshToken record
-            RefreshToken.objects.create(
-                user=request.user, 
-                token=token, 
-                expires_at=timezone.now()
-            )
+            # Use SimpleJWT's RefreshToken blacklist mechanism
+            refresh_token = RefreshToken(token)
+            refresh_token.blacklist()
             return Response({'detail': 'Logged out successfully.'}, status=200)
         except Exception as e:
             return Response({'detail': str(e)}, status=400)
@@ -362,6 +437,23 @@ class MediaViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         user = self.request.user
+        file = self.request.FILES.get('file')
+        # Optional orientation hint from request (?target_orientation=portrait|landscape)
+        target = self.request.query_params.get('target_orientation') or self.request.data.get('target_orientation') or 'portrait'
+
+        # If it's an image, normalize to target orientation
+        content_type = getattr(file, 'content_type', None)
+        if file and content_type and content_type.startswith('image/'):
+            try:
+                processed = normalize_image_to_orientation(file.read(), 'landscape' if target == 'landscape' else 'portrait')
+                from django.core.files.base import ContentFile
+                # Replace uploaded content with processed PNG
+                file_name = file.name.rsplit('.', 1)[0] + '.png'
+                serializer.validated_data['file'] = ContentFile(processed, name=file_name)
+            except Exception as e:
+                # Fallback to original if processing fails
+                pass
+
         if user.account_type == 'business' and hasattr(user, 'owned_business'):
             serializer.save(business=user.owned_business, uploaded_by=user)
         else:
@@ -419,6 +511,7 @@ class CampaignMediaViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  # TV devices need to call this before authentication
+@throttle_classes([ActivationAnonThrottle, ActivationUserThrottle])
 def request_activation_code(request):
     """
     TV device calls this to get an activation code
@@ -444,8 +537,18 @@ def request_activation_code(request):
                 'display_name': display.name
             })
         else:
-            # Device exists but not activated, return existing code
-            activation_code = display.activation_code
+            # Device exists but not activated
+            # If code expired (>15 min), generate new one
+            code_expired = not display.activation_code_created_at or (timezone.now() - display.activation_code_created_at) > timedelta(minutes=15)
+            if not display.activation_code or code_expired:
+                activation_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                while Display.objects.filter(activation_code=activation_code).exists():
+                    activation_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                display.activation_code = activation_code
+                display.activation_code_created_at = timezone.now()
+                display.save(update_fields=['activation_code', 'activation_code_created_at'])
+            else:
+                activation_code = display.activation_code
     except Display.DoesNotExist:
         # Generate new activation code
         activation_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -458,20 +561,41 @@ def request_activation_code(request):
         display = Display.objects.create(
             device_id=device_id,
             activation_code=activation_code,
+            activation_code_created_at=timezone.now(),
             activation_status='pending',
             device_info=device_info,
             name=f"TV-{activation_code}",  # Default name
             # registered_by will be set when user activates
         )
     
+    # Include QR code link for mobile app scanning (deep link or web link)
+    base_url = request.build_absolute_uri('/')[:-1]
+    activation_url = f"{base_url}/api/v1/devices/activate/?code={activation_code}"
+    try:
+        png_bytes = generate_activation_qr(activation_url)
+        import base64
+        qr_b64 = base64.b64encode(png_bytes).decode('ascii')
+    except Exception:
+        qr_b64 = None
+
+    # TTL remaining (seconds)
+    expires_in = None
+    if display.activation_code_created_at:
+        elapsed = (timezone.now() - display.activation_code_created_at).total_seconds()
+        expires_in = max(0, int(900 - elapsed))
+
     return Response({
         'activation_code': activation_code,
         'status': 'pending',
-        'message': 'Use this code in the web dashboard to activate your device'
+        'activation_url': activation_url,
+        'activation_qr_png_base64': qr_b64,
+        'expires_in_seconds': expires_in,
+        'message': 'Use this code (or QR) to activate your device'
     })
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ActivationAuthThrottle])
 def activate_device(request):
     """
     Web user calls this to activate a device using the activation code
@@ -490,6 +614,9 @@ def activate_device(request):
     
     try:
         display = Display.objects.get(activation_code=activation_code, activation_status='pending')
+        # Verify TTL (15 minutes)
+        if not display.activation_code_created_at or (timezone.now() - display.activation_code_created_at) > timedelta(minutes=15):
+            return Response({'error': 'Activation code has expired. Please generate a new code.'}, status=status.HTTP_400_BAD_REQUEST)
     except Display.DoesNotExist:
         return Response(
             {'error': 'Invalid or already used activation code'}, 
@@ -571,14 +698,33 @@ def get_device_campaign(request):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # Get campaign media items
+        # Get campaign media items (ensure public URLs)
         campaign_media = CampaignMedia.objects.filter(campaign=campaign).select_related('media')
-        
+
+        def to_public_url(file_field):
+            if not file_field:
+                return ''
+            try:
+                url = file_field.url
+            except Exception:
+                url = None
+            if not url:
+                return ''
+            public_ep = getattr(settings, 'MINIO_PUBLIC_ENDPOINT', 'http://localhost:9000').rstrip('/')
+            internal_ep = getattr(settings, 'AWS_S3_ENDPOINT_URL', '').rstrip('/')
+            if url.startswith('http://') or url.startswith('https://'):
+                if internal_ep and url.startswith(internal_ep):
+                    return url.replace(internal_ep, public_ep, 1)
+                return url
+            bucket = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'media')
+            file_path = str(file_field.name).lstrip('/')
+            return f"{public_ep}/{bucket}/{file_path}"
+
         media_items = []
         for cm in campaign_media:
             media_items.append({
                 'media_id': cm.media.media_id,
-                'file_path': cm.media.file.url if cm.media.file else '',
+                'file_path': to_public_url(cm.media.file),
                 'media_type': cm.media.media_type,
                 'duration': cm.display_duration_seconds,
                 'name': cm.media.name,
@@ -587,6 +733,7 @@ def get_device_campaign(request):
         return Response({
             'campaign': campaign.campaign_id,
             'campaign_name': campaign.name,
+            'normalize_to_orientation': getattr(campaign, 'normalize_to_orientation', 'none'),
             'media_items': media_items,
             'schedule': ScheduleSerializer(schedule).data if schedule else None
         })
@@ -599,6 +746,7 @@ def get_device_campaign(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([ActivationAnonThrottle, ActivationUserThrottle])
 def check_activation_status(request):
     """
     TV device calls this to check if it has been activated
@@ -629,10 +777,15 @@ def check_activation_status(request):
                 'message': 'Device is activated and ready to use'
             })
         else:
+            expires_in = None
+            if display.activation_code_created_at:
+                elapsed = (timezone.now() - display.activation_code_created_at).total_seconds()
+                expires_in = max(0, int(900 - elapsed))
             return Response({
                 'status': display.activation_status,
                 'activated': False,
                 'activation_code': display.activation_code,
+                'expires_in_seconds': expires_in,
                 'message': 'Device is not yet activated'
             })
             
@@ -646,6 +799,8 @@ def check_activation_status(request):
 from django.http import HttpResponse
 from django.conf import settings
 import os
+import csv
+from django.db import models
 
 def tv_simulator_view(request):
     """Serve the TV simulator HTML file"""
@@ -794,3 +949,315 @@ def analytics_dashboard(request):
             for imp in recent_impressions
         ]
     })
+
+# --- Advanced Analytics: Summary and Exports ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def analytics_summary(request):
+    """Summary analytics including device uptime approximation and time series.
+
+    Optional query params:
+    - start: ISO datetime or YYYY-MM-DD (defaults to now-24h for granularity=hour, now-7d for day)
+    - end: ISO datetime or YYYY-MM-DD (defaults to now)
+    - granularity: 'hour' | 'day' (default 'hour')
+    """
+    user = request.user
+
+    # Select displays for user
+    if user.account_type == 'personal':
+        displays = Display.objects.filter(personal_user=user)
+    elif user.account_type == 'business' and hasattr(user, 'owned_business'):
+        displays = Display.objects.filter(business=user.owned_business)
+    else:
+        displays = Display.objects.none()
+
+    now = timezone.now()
+
+    # Parse time window
+    from django.utils.dateparse import parse_datetime, parse_date
+    from django.utils.timezone import make_aware, get_current_timezone
+    granularity = request.query_params.get('granularity', 'hour')
+    end_str = request.query_params.get('end')
+    start_str = request.query_params.get('start')
+
+    def _to_aware(dt_str):
+        if not dt_str:
+            return None
+        dt = parse_datetime(dt_str)
+        if dt is None:
+            d = parse_date(dt_str)
+            if d is not None:
+                # Interpret as start of day local time
+                from datetime import datetime as _dt
+                dt = _dt(d.year, d.month, d.day)
+        if dt is None:
+            return None
+        if timezone.is_naive(dt):
+            dt = make_aware(dt, get_current_timezone())
+        return dt
+
+    end = _to_aware(end_str) or now
+    if granularity == 'day':
+        default_span = timedelta(days=7)
+    else:
+        default_span = timedelta(hours=24)
+    start = _to_aware(start_str) or (end - default_span)
+
+    # Clamp if inverted
+    if end < start:
+        start, end = end, start
+
+    # Uptime approximation: heartbeats per device in window vs expected (1/min)
+    uptime = []
+    total_minutes = max(1, int((end - start).total_seconds() / 60))
+    expected = total_minutes
+    hb = DeviceHeartbeat.objects.filter(display__in=displays, timestamp__gte=start, timestamp__lte=end)
+    hb_counts = {}
+    for d_id, cnt in hb.values_list('display_id').annotate(models.Count('id')):
+        hb_counts[d_id] = cnt
+    for d in displays:
+        count = hb_counts.get(d.display_id, 0)
+        percent = min(100.0, round((count / expected) * 100.0, 1)) if expected else 0.0
+        uptime.append({
+            'display_id': d.display_id,
+            'name': d.name,
+            'online_now': bool(d.last_seen and (now - d.last_seen).total_seconds() < 120),
+            'last_seen': d.last_seen.isoformat() if d.last_seen else None,
+            'uptime_24h_percent': percent,
+            'heartbeats_24h': count,
+        })
+
+    # Time series of impressions across window
+    ts = []
+    impressions = MediaImpression.objects.filter(display__in=displays, started_at__gte=start, started_at__lte=end)
+    # Build buckets
+    from collections import defaultdict
+    buckets = defaultdict(int)
+    if granularity == 'day':
+        def bucket_key(dt):
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        step = timedelta(days=1)
+    else:
+        def bucket_key(dt):
+            return dt.replace(minute=0, second=0, microsecond=0)
+        step = timedelta(hours=1)
+    for imp in impressions.values_list('started_at', flat=True):
+        key = bucket_key(imp)
+        buckets[key] += 1
+    # Produce ordered series
+    cur = bucket_key(start)
+    end_bucket = bucket_key(end)
+    while cur <= end_bucket:
+        ts.append({'timestamp': cur.isoformat(), 'count': buckets.get(cur, 0)})
+        cur += step
+
+    # Top media within window
+    top_media = []
+    media_counts = impressions.model.objects.filter(display__in=displays, started_at__gte=start, started_at__lte=end) \
+        .values('media__name', 'campaign__name') \
+        .annotate(total=models.Count('id'), total_duration=models.Sum('duration_shown')) \
+        .order_by('-total')[:20]
+    for row in media_counts:
+        top_media.append({
+            'media': row['media__name'],
+            'campaign': row['campaign__name'],
+            'total_impressions': row['total'],
+            'total_duration': row['total_duration'] or 0,
+        })
+
+    return Response({
+        'uptime': uptime,
+        'impressions_timeseries_24h': ts,
+        'top_media_7d': top_media,
+    })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def analytics_campaign_breakdown(request):
+    """Per-campaign breakdown in a time window.
+
+    Query params: start, end (ISO/Date), optional business/personal via auth.
+    """
+    user = request.user
+    if user.account_type == 'personal':
+        displays = Display.objects.filter(personal_user=user)
+    elif user.account_type == 'business' and hasattr(user, 'owned_business'):
+        displays = Display.objects.filter(business=user.owned_business)
+    else:
+        displays = Display.objects.none()
+
+    from django.utils.dateparse import parse_datetime, parse_date
+    from django.utils.timezone import make_aware, get_current_timezone
+
+    def _to_aware(dt_str):
+        if not dt_str:
+            return None
+        dt = parse_datetime(dt_str)
+        if dt is None:
+            d = parse_date(dt_str)
+            if d is not None:
+                from datetime import datetime as _dt
+                dt = _dt(d.year, d.month, d.day)
+        if dt is None:
+            return None
+        if timezone.is_naive(dt):
+            dt = make_aware(dt, get_current_timezone())
+        return dt
+
+    now = timezone.now()
+    end = _to_aware(request.query_params.get('end')) or now
+    start = _to_aware(request.query_params.get('start')) or (end - timedelta(days=7))
+    if end < start:
+        start, end = end, start
+
+    qs = MediaImpression.objects.filter(display__in=displays, started_at__gte=start, started_at__lte=end)
+    agg = qs.values('campaign__id', 'campaign__name').annotate(
+        total_impressions=models.Count('id'),
+        total_duration=models.Sum('duration_shown'),
+        unique_displays=models.Count('display', distinct=True),
+    ).order_by('-total_impressions')
+
+    campaigns = []
+    for row in agg:
+        # Top media for campaign
+        top_media = list(
+            qs.filter(campaign__id=row['campaign__id']).values('media__name').annotate(
+                total=models.Count('id'),
+                total_duration=models.Sum('duration_shown'),
+            ).order_by('-total')[:10]
+        )
+        campaigns.append({
+            'campaign_id': row['campaign__id'],
+            'campaign_name': row['campaign__name'],
+            'total_impressions': row['total_impressions'],
+            'total_duration': row['total_duration'] or 0,
+            'unique_displays': row['unique_displays'],
+            'top_media': [
+                {
+                    'media': tm['media__name'],
+                    'total_impressions': tm['total'],
+                    'total_duration': tm['total_duration'] or 0,
+                } for tm in top_media
+            ]
+        })
+
+    return Response({
+        'start': start.isoformat(),
+        'end': end.isoformat(),
+        'campaigns': campaigns,
+    })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_impressions_csv(request):
+    """Export impressions as CSV within optional start/end window (defaults last 7 days)"""
+    user = request.user
+    if user.account_type == 'personal':
+        displays = Display.objects.filter(personal_user=user)
+    elif user.account_type == 'business' and hasattr(user, 'owned_business'):
+        displays = Display.objects.filter(business=user.owned_business)
+    else:
+        displays = Display.objects.none()
+
+    from django.utils.dateparse import parse_datetime, parse_date
+    from django.utils.timezone import make_aware, get_current_timezone
+    now = timezone.now()
+    def _to_aware(dt_str):
+        if not dt_str:
+            return None
+        dt = parse_datetime(dt_str)
+        if dt is None:
+            d = parse_date(dt_str)
+            if d is not None:
+                from datetime import datetime as _dt
+                dt = _dt(d.year, d.month, d.day)
+        if dt is None:
+            return None
+        if timezone.is_naive(dt):
+            dt = make_aware(dt, get_current_timezone())
+        return dt
+    end = _to_aware(request.query_params.get('end')) or now
+    start = _to_aware(request.query_params.get('start')) or (end - timedelta(days=7))
+    if end < start:
+        start, end = end, start
+
+    qs = MediaImpression.objects.filter(display__in=displays, started_at__gte=start, started_at__lte=end) \
+        .select_related('display', 'campaign', 'media') \
+        .order_by('-started_at')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="impressions.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['timestamp', 'display', 'campaign', 'media', 'duration_shown', 'scheduled_duration', 'completed', 'sequence_number', 'total_media_in_campaign'])
+    for imp in qs:
+        writer.writerow([
+            imp.started_at.isoformat(),
+            imp.display.name,
+            imp.campaign.name,
+            imp.media.name,
+            imp.duration_shown,
+            imp.scheduled_duration,
+            int(imp.completed),
+            imp.sequence_number,
+            imp.total_media_in_campaign,
+        ])
+    return response
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_devices_csv(request):
+    """Export devices with last_seen and uptime approximation within optional window (default 24h)"""
+    user = request.user
+    if user.account_type == 'personal':
+        displays = Display.objects.filter(personal_user=user)
+    elif user.account_type == 'business' and hasattr(user, 'owned_business'):
+        displays = Display.objects.filter(business=user.owned_business)
+    else:
+        displays = Display.objects.none()
+
+    from django.utils.dateparse import parse_datetime, parse_date
+    from django.utils.timezone import make_aware, get_current_timezone
+    now = timezone.now()
+    def _to_aware(dt_str):
+        if not dt_str:
+            return None
+        dt = parse_datetime(dt_str)
+        if dt is None:
+            d = parse_date(dt_str)
+            if d is not None:
+                from datetime import datetime as _dt
+                dt = _dt(d.year, d.month, d.day)
+        if dt is None:
+            return None
+        if timezone.is_naive(dt):
+            dt = make_aware(dt, get_current_timezone())
+        return dt
+    end = _to_aware(request.query_params.get('end')) or now
+    start = _to_aware(request.query_params.get('start')) or (end - timedelta(hours=24))
+    if end < start:
+        start, end = end, start
+
+    total_minutes = max(1, int((end - start).total_seconds() / 60))
+    expected = total_minutes
+    hb = DeviceHeartbeat.objects.filter(display__in=displays, timestamp__gte=start, timestamp__lte=end)
+    hb_counts = {}
+    for d_id, cnt in hb.values_list('display_id').annotate(models.Count('id')):
+        hb_counts[d_id] = cnt
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="devices_status.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['display_id', 'name', 'location', 'status', 'last_seen', 'uptime_percent', 'heartbeats_window'])
+    for d in displays:
+        count = hb_counts.get(d.display_id, 0)
+        percent = min(100.0, round((count / expected) * 100.0, 1)) if expected else 0.0
+        writer.writerow([
+            d.display_id,
+            d.name,
+            d.location or '',
+            d.activation_status,
+            d.last_seen.isoformat() if d.last_seen else '',
+            percent,
+            count,
+        ])
+    return response

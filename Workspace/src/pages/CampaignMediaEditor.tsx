@@ -6,6 +6,8 @@ import api from "../services/api.ts";
 type Media = {
   media_id: number;
   file: string;
+  media_type?: 'image' | 'video';
+  file_url?: string;
   name: string;
   description?: string;
   uploaded_at: string;
@@ -36,6 +38,29 @@ export default function CampaignMediaEditor() {
   const [availableMedia, setAvailableMedia] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  const PUBLIC_MINIO = (import.meta as any).env?.VITE_MINIO_PUBLIC_ENDPOINT || "http://localhost:9000";
+  const MINIO_BUCKET = (import.meta as any).env?.VITE_MINIO_BUCKET_NAME || "media";
+
+  const toAbsoluteUrl = (m?: Media): string => {
+    if (!m) return "/placeholder-image.png";
+    // Prefer server-provided absolute URL
+    if (m.file_url && /^(http|https):\/\//i.test(m.file_url)) return m.file_url;
+    // Rewrite internal http://minio:9000 host to public endpoint
+    if (m.file && /^(http|https):\/\//i.test(m.file)) {
+      try {
+        const u = new URL(m.file);
+        const base = new URL(PUBLIC_MINIO);
+        return `${base.origin}${u.pathname}`;
+      } catch {
+        // fallthrough
+      }
+    }
+    const path = (m.file || m.file_url || "").replace(/^\/+/, "");
+    if (!path) return "/placeholder-image.png";
+    const cleaned = path.startsWith(`${MINIO_BUCKET}/`) ? path.slice(MINIO_BUCKET.length + 1) : path;
+    return `${PUBLIC_MINIO.replace(/\/$/, "")}/${MINIO_BUCKET}/${cleaned}`;
+  };
 
   useEffect(() => {
     if (!campaignId) return;
@@ -255,12 +280,36 @@ export default function CampaignMediaEditor() {
                       
                       <div className="me-3" style={{ width: '80px', height: '60px' }}>
                         {item.media_details ? (
-                          <img 
-                            src={item.media_details.file}
-                            alt={item.media_details.name}
-                            className="img-thumbnail w-100 h-100"
-                            style={{ objectFit: 'cover' }}
-                          />
+                          item.media_details.media_type === 'video' ? (
+                            <video
+                              className="img-thumbnail w-100 h-100"
+                              style={{ objectFit: 'cover' }}
+                              src={toAbsoluteUrl(item.media_details)}
+                              muted
+                              playsInline
+                            />
+                          ) : (
+                            <img 
+                              src={toAbsoluteUrl(item.media_details)}
+                              alt={item.media_details.name}
+                              className="img-thumbnail w-100 h-100"
+                              style={{ objectFit: 'cover' }}
+                              onLoad={(e) => {
+                                const u = (e.target as HTMLImageElement).getAttribute('src');
+                                console.debug('Campaign image loaded:', u);
+                              }}
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                console.warn('Campaign image failed:', img.src);
+                                img.style.display = 'none';
+                                const parent = img.parentElement;
+                                if (parent) {
+                                  parent.classList.add('bg-light');
+                                  parent.innerHTML = '<div class="d-flex align-items-center justify-content-center w-100 h-100"><small class="text-muted">No Preview</small></div>';
+                                }
+                              }}
+                            />
+                          )
                         ) : (
                           <div className="bg-light d-flex align-items-center justify-content-center w-100 h-100">
                             <span className="text-muted">?</span>
@@ -349,12 +398,37 @@ export default function CampaignMediaEditor() {
                       <div key={media.media_id} className="col-md-6">
                         <div className="card">
                           <div className="position-relative" style={{ paddingBottom: "56.25%" }}>
-                            <img 
-                              src={media.file}
-                              alt={media.name}
-                              className="card-img-top position-absolute w-100 h-100"
-                              style={{ objectFit: 'cover' }}
-                            />
+                            {media.media_type === 'video' ? (
+                              <video
+                                className="position-absolute w-100 h-100"
+                                style={{ objectFit: 'cover' }}
+                                src={toAbsoluteUrl(media)}
+                                muted
+                                playsInline
+                                controls
+                              />
+                            ) : (
+                              <img 
+                                src={toAbsoluteUrl(media)}
+                                alt={media.name}
+                                className="card-img-top position-absolute w-100 h-100"
+                                style={{ objectFit: 'cover' }}
+                                onLoad={(e) => {
+                                  const u = (e.target as HTMLImageElement).getAttribute('src');
+                                  console.debug('Available media image loaded:', u);
+                                }}
+                                onError={(e) => {
+                                  const img = e.target as HTMLImageElement;
+                                  console.warn('Available media image failed:', img.src);
+                                  img.style.display = 'none';
+                                  const parent = img.parentElement;
+                                  if (parent) {
+                                    parent.classList.add('bg-light');
+                                    parent.innerHTML = '<div class="d-flex align-items-center justify-content-center w-100 h-100"><small class="text-muted">No Preview</small></div>';
+                                  }
+                                }}
+                              />
+                            )}
                           </div>
                           <div className="card-body">
                             <h6 className="card-title">{media.name}</h6>

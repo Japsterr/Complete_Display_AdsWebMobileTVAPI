@@ -21,13 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ue+j-y)eh@!@bw0)b9)0x&e!y49qkly*-m7j2v1w(10+6ktfoh'
+# Prefer environment variable when available
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-ue+j-y)eh@!@bw0)b9)0x&e!y49qkly*-m7j2v1w(10+6ktfoh')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
 # Allow connections from local network for mobile app testing
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.3.73', '0.0.0.0']
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.3.73,0.0.0.0').split(',')
 
 
 # Application definition
@@ -43,8 +44,12 @@ INSTALLED_APPS = [
     'corsheaders',
     'api',
     'drf_yasg',
-        'storages',
+    'storages',
+    'rest_framework_simplejwt.token_blacklist',
 ]
+
+# Public MinIO endpoint for serving media files to frontend
+MINIO_PUBLIC_ENDPOINT = os.environ.get('MINIO_PUBLIC_ENDPOINT', 'http://localhost:9000')
 
 # Custom user model
 AUTH_USER_MODEL = 'api.User'
@@ -60,21 +65,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 # CORS configuration - More permissive for development
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:3001", 
-    "http://127.0.0.1:8080",
-    "http://localhost:8080",
-    "http://localhost:5173",  # Vite frontend
-    "http://localhost:5174",  # Vite frontend alternate port
-    "http://localhost:5175",  # Vite frontend alternate port
-    "http://127.0.0.1:5173",  # Alternative localhost format
-    "http://127.0.0.1:5174",  # Alternative localhost format
-    "http://127.0.0.1:5175",  # Alternative localhost format
-]
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 
+    "http://localhost:3000;http://localhost:3001;http://127.0.0.1:8080;http://localhost:8080;http://localhost:5173;http://localhost:5174;http://localhost:5175;http://127.0.0.1:5173;http://127.0.0.1:5174;http://127.0.0.1:5175"
+).split(';')
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for development - change to False in production
+# Allow all origins for development unless explicitly disabled
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('1','true','yes')
 
 # Additional CORS headers
 CORS_ALLOW_HEADERS = [

@@ -1,69 +1,26 @@
-# React + TypeScript + Vite
+# DisplayAds Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Dark-themed React + Vite + TypeScript app using Chakra UI with a matte gray surface and peach/orange afterglow brand accents.
 
-Currently, two official plugins are available:
+## Theme
+- Central tokens: `src/theme/tokens.ts`
+- Chakra theme: `src/theme/index.ts`
+- Global dark public styles: `src/custom.css` (class `.public-dark` for marketing pages)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Key brand values:
+- Brand color: `brand.500 = #ff6b35`
+- Surfaces: bg `#1a1b1e`, card `#222325`, border `rgba(255,107,53,0.25)`
 
-## Expanding the ESLint configuration
+## Pages
+- Public: Home, Features, Pricing, Contact, Documentation wrapped by `PublicLayout`.
+- Auth: Login, Register.
+- Dashboard: Media, Campaigns, Displays, Analytics, Settings.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Dev
+- Build: `npm run build`
+- Preview: `npm run preview`
+- Lint: `npm run lint`
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Notes
+- Legacy light styles (fallback.css, App.css) are no longer referenced anywhere. You can delete them to reduce noise, but they won't affect the build.
+- Analytics summary + CSV are wired in the app; ensure API service is up and auth tokens available.

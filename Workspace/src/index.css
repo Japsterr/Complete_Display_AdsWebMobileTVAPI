@@ -5,18 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* CSS Custom Properties */
-:root {
-  --bs-primary: #3b82f6;
-  --bs-primary-rgb: 59, 130, 246;
-  --bs-secondary: #64748b;
-  --bs-success: #10b981;
-  --bs-danger: #ef4444;
-  --bs-warning: #f59e0b;
-  --bs-info: #06b6d4;
-  --bs-light: #f8fafc;
-  --bs-dark: #1e293b;
-  --sidebar-width: 260px;
-}
+:root { --sidebar-width: 260px; }
 
 /* Global Styles */
 * {
@@ -30,38 +19,22 @@ html, body, #root {
 }
 
 body {
-  background-color: #f1f5f9;
+  background-color: #1a1b1e;
   overflow-x: hidden;
 }
 
 /* Layout Styles */
-.sidebar {
-  width: var(--sidebar-width);
-  height: 100vh;
-  background: #1e293b !important;
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 1000;
-  overflow-y: auto;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-}
+.sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; left: 0; top: 0; z-index: 1000; overflow-y: auto; box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2); }
 
 .dashboard-content {
   margin-left: var(--sidebar-width);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f1f5f9;
+  background-color: #0f1113;
 }
 
-.header-main {
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-}
+.header-main { position: sticky; top: 0; z-index: 999; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
 
 /* Mobile Styles */
 @media (max-width: 767.98px) {
@@ -240,21 +213,7 @@ body {
   font-size: 1.5rem;
 }
 
-/* Public pages styling */
-.hero-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.feature-icon {
-  width: 3rem;
-  height: 3rem;
-  background: linear-gradient(135deg, var(--bs-primary) 0%, #4f46e5 100%);
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* Public pages styling moved to custom.css */
 
 /* Footer styling */
 .footer {

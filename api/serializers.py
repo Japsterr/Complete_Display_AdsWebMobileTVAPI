@@ -1,3 +1,44 @@
+
+from rest_framework import serializers
+from .models import DisplayGroup, Tag, MediaApproval
+
+class DisplayGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DisplayGroup
+        fields = ['id', 'name', 'owner', 'displays', 'created_at', 'updated_at']
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'created_at']
+
+class MediaApprovalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MediaApproval
+        fields = ['id', 'media', 'reviewed_by', 'status', 'comments', 'reviewed_at', 'created_at']
+# Organization & User Management Serializers
+from rest_framework import serializers
+from .models import Organization, Membership, Invitation, AuditLog
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organization
+        fields = ['id', 'name', 'created_at', 'owner']
+
+class MembershipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Membership
+        fields = ['id', 'user', 'organization', 'role', 'joined_at']
+
+class InvitationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Invitation
+        fields = ['id', 'email', 'organization', 'invited_by', 'accepted', 'created_at']
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditLog
+        fields = ['id', 'user', 'action', 'timestamp', 'details']
 from rest_framework import serializers
 from .models import (
     User, Plan, UserProfile, Business, BusinessMember, Campaign, Media, CampaignMedia,
@@ -145,7 +186,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = [
-            'campaign_id', 'name', 'description', 'screen_orientation', 'status', 'status_display',
+            'campaign_id', 'name', 'description', 'screen_orientation', 'normalize_to_orientation', 'status', 'status_display',
             'start_date', 'end_date', 'created_at', 'updated_at',
             'media_count', 'total_duration'
         ]
@@ -160,10 +201,11 @@ class CampaignSerializer(serializers.ModelSerializer):
 
 class MediaSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
+    media_type = serializers.CharField(read_only=True)
 
     class Meta:
         model = Media
-        fields = ['media_id', 'name', 'description', 'file', 'file_url', 'uploaded_at']
+        fields = ['media_id', 'name', 'description', 'file', 'file_url', 'media_type', 'uploaded_at']
         read_only_fields = ['media_id', 'uploaded_at']
 
     def get_file_url(self, obj):
@@ -171,13 +213,57 @@ class MediaSerializer(serializers.ModelSerializer):
         if obj.file and hasattr(obj.file, 'url'):
             # If the url is already absolute, return as is
             if obj.file.url.startswith('http://') or obj.file.url.startswith('https://'):
-                return obj.file.url
-            # Otherwise, construct the public MinIO URL
-            endpoint = 'http://localhost:9000'
-            bucket = 'media'
+                from django.conf import settings
+                public_ep = getattr(settings, 'MINIO_PUBLIC_ENDPOINT', 'http://localhost:9000').rstrip('/')
+                internal_ep = getattr(settings, 'AWS_S3_ENDPOINT_URL', '').rstrip('/')
+                url = obj.file.url
+                # If storage URL points at internal endpoint (e.g., http://minio:9000), rewrite to public endpoint
+                if internal_ep and url.startswith(internal_ep):
+                    return url.replace(internal_ep, public_ep, 1)
+                return url
+            # Otherwise, construct the public MinIO URL using settings
+            from django.conf import settings
+            endpoint = getattr(settings, 'MINIO_PUBLIC_ENDPOINT', 'http://localhost:9000')
+            bucket = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'media')
             file_path = obj.file.name.lstrip('/')
             return f"{endpoint}/{bucket}/{file_path}"
         return ''
+
+    def validate_file(self, value):
+        # Basic validation for allowed mime types and size
+        import os
+        import mimetypes
+        from django.core.exceptions import ValidationError
+        from django.conf import settings
+
+        # Size limit (default 10MB)
+        max_mb = float(getattr(settings, 'MAX_UPLOAD_MB', 10))
+        if hasattr(value, 'size') and value.size > max_mb * 1024 * 1024:
+            raise ValidationError(f"File too large. Max {int(max_mb)}MB allowed.")
+
+        # Guess mime type from name if missing
+        content_type = getattr(value, 'content_type', None) or mimetypes.guess_type(getattr(value, 'name', ''), strict=False)[0]
+        if not content_type:
+            raise ValidationError('Could not determine file type.')
+
+        allowed_images = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+        allowed_videos = {'video/mp4', 'video/webm', 'video/ogg'}
+        if content_type not in allowed_images | allowed_videos:
+            raise ValidationError('Unsupported file type. Allowed: images (jpg, png, webp, gif) and videos (mp4, webm, ogg).')
+
+        # Attach detected content_type for use in create()
+        value._detected_content_type = content_type
+        return value
+
+    def create(self, validated_data):
+        # Auto-set media_type based on content_type/extension
+        file_obj = validated_data.get('file')
+        content_type = getattr(file_obj, '_detected_content_type', getattr(file_obj, 'content_type', None))
+        media_type = 'image'
+        if content_type and content_type.startswith('video/'):
+            media_type = 'video'
+        validated_data['media_type'] = media_type
+        return super().create(validated_data)
 
 class CampaignMediaSerializer(serializers.ModelSerializer):
     class Meta:

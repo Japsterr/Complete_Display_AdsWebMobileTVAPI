@@ -23,12 +23,12 @@ export default function Sidebar() {
   const location = useLocation();
 
   return (
-    <nav className="sidebar d-flex">
+    <nav className="sidebar d-flex" style={{ backgroundColor: '#1a1b1e', borderRight: '1px solid rgba(255,107,53,0.25)' }}>
       <div className="d-flex flex-column h-100">
-        <div className="flex-shrink-0 p-4 border-bottom border-secondary">
+        <div className="flex-shrink-0 p-4" style={{ borderBottom: '1px solid rgba(255,107,53,0.25)' }}>
           <div className="d-flex align-items-center">
-            <div className="rounded p-2 bg-primary me-3">
-              <span className="text-white fw-bold">D</span>
+            <div className="rounded p-2 me-3" style={{ background: 'linear-gradient(135deg, #ff6b35 0%, #ff925f 100%)' }}>
+              <span className="fw-bold" style={{ color: '#1a1b1e' }}>D</span>
             </div>
             <h2 className="h5 mb-0 text-white fw-bold">DisplayAds</h2>
           </div>
@@ -45,9 +45,7 @@ export default function Sidebar() {
                     className={`nav-link d-flex align-items-center px-3 py-2 ${
                       isActive ? "active" : ""
                     }`}
-                    style={{ 
-                      color: isActive ? "white" : "#cbd5e0"
-                    }}
+                    style={{ color: isActive ? '#1a1b1e' : '#cbd5e0', backgroundColor: isActive ? '#ff6b35' : 'transparent' }}
                   >
                     <Icon className="me-3" style={{ width: "20px", height: "20px" }} />
                     {item.name}
