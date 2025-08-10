@@ -1089,7 +1089,12 @@ def analytics_campaign_breakdown(request):
     from django.utils.dateparse import parse_datetime, parse_date
     from django.utils.timezone import make_aware, get_current_timezone
 
-    def _to_aware(dt_str):
+    def _to_aware(dt_str, *, end_inclusive: bool = False):
+        """Parse a datetime/date string to an aware datetime.
+
+        - If dt_str is YYYY-MM-DD and end_inclusive=True, returns end of day (23:59:59.999999).
+        - If dt_str is YYYY-MM-DD and end_inclusive=False, returns start of day (00:00:00).
+        """
         if not dt_str:
             return None
         dt = parse_datetime(dt_str)
@@ -1097,7 +1102,16 @@ def analytics_campaign_breakdown(request):
             d = parse_date(dt_str)
             if d is not None:
                 from datetime import datetime as _dt
-                dt = _dt(d.year, d.month, d.day)
+                if end_inclusive:
+                    dt = _dt(d.year, d.month, d.day, 23, 59, 59, 999999)
+                else:
+                    dt = _dt(d.year, d.month, d.day)
+        else:
+            # parse_datetime parsed a date string as midnight; detect plain date inputs
+            if end_inclusive and dt.time() == getattr(dt, 'min').time():
+                # Heuristic: if input looks like YYYY-MM-DD (no time separator), bump to end of day
+                if ('T' not in dt_str) and (' ' not in dt_str):
+                    dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
         if dt is None:
             return None
         if timezone.is_naive(dt):
@@ -1105,13 +1119,19 @@ def analytics_campaign_breakdown(request):
         return dt
 
     now = timezone.now()
-    end = _to_aware(request.query_params.get('end')) or now
+    end = _to_aware(request.query_params.get('end'), end_inclusive=True) or now
     start = _to_aware(request.query_params.get('start')) or (end - timedelta(days=7))
     if end < start:
         start, end = end, start
 
     qs = MediaImpression.objects.filter(display__in=displays, started_at__gte=start, started_at__lte=end)
-    agg = qs.values('campaign__id', 'campaign__name').annotate(
+    try:
+        print("=== ANALYTICS CAMPAIGN BREAKDOWN DEBUG ===")
+        print(f"User: {user.email} | Displays: {list(displays.values_list('display_id', flat=True))}")
+        print(f"Window: {start.isoformat()} -> {end.isoformat()} | Impressions count: {qs.count()}")
+    except Exception:
+        pass
+    agg = qs.values('campaign__campaign_id', 'campaign__name').annotate(
         total_impressions=models.Count('id'),
         total_duration=models.Sum('duration_shown'),
         unique_displays=models.Count('display', distinct=True),
@@ -1121,13 +1141,13 @@ def analytics_campaign_breakdown(request):
     for row in agg:
         # Top media for campaign
         top_media = list(
-            qs.filter(campaign__id=row['campaign__id']).values('media__name').annotate(
+            qs.filter(campaign__campaign_id=row['campaign__campaign_id']).values('media__name').annotate(
                 total=models.Count('id'),
                 total_duration=models.Sum('duration_shown'),
             ).order_by('-total')[:10]
         )
         campaigns.append({
-            'campaign_id': row['campaign__id'],
+            'campaign_id': row['campaign__campaign_id'],
             'campaign_name': row['campaign__name'],
             'total_impressions': row['total_impressions'],
             'total_duration': row['total_duration'] or 0,
