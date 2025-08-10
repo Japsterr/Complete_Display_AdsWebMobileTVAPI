@@ -5,6 +5,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import ApiService, { User } from '../services/ApiService';
+import { setLastLoginAt } from '../services/OfflineService';
 
 interface AuthState {
   user: User | null;
@@ -110,6 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'AUTH_START' });
       const response = await ApiService.login(email, password);
       dispatch({ type: 'AUTH_SUCCESS', user: response.user });
+  // record last successful login for offline access window
+  try { await setLastLoginAt(new Date()); } catch {}
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail || 'Login failed. Please try again.';
       dispatch({ type: 'AUTH_ERROR', error: errorMessage });

@@ -16,6 +16,20 @@
 - Manager app now includes a Settings tab to change the API base URL at runtime and test connectivity via /health.
 - TV app respects campaign normalize_to_orientation (portrait/landscape) by rotating the wrapper when device orientation mismatches. Media uses resizeMode="contain" to avoid stretching.
 
+## Offline mode (Manager and TV)
+
+- Manager app:
+	- After a successful login, the app stores the last login time.
+	- If the API is unreachable but last login was within the past 24 hours, the app displays cached data for:
+		- Campaigns, Media, Displays, and Dashboard stats.
+	- A banner shows “Offline mode: showing cached data”.
+	- Settings tab still allows changing the API base URL; the “Test Connection” button helps confirm when connectivity returns.
+
+- TV app:
+	- Caches the last successfully fetched campaign locally and will continue playback if the API becomes unreachable.
+	- Prefetches images to improve resilience and reduce flicker.
+	- Continues sending heartbeats/impressions when online; if offline, telemetry can queue client-side and be retried (basic best-effort).
+
 # 🚀 Complete DisplayAds SaaS Platform - Updated
 
 **A comprehensive digital signage SaaS platform with Web Dashboard, Mobile Management App, Android TV App, and Backend API**

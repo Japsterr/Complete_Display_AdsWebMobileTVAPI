@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useApi } from '../contexts/ApiContext';
 import { DashboardStats } from '../services/ApiService';
+import OfflineBanner from '../components/OfflineBanner';
 
 interface DashboardScreenProps {
   navigation: any;
@@ -111,6 +112,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     >
+      <OfflineBanner />
       {/* Header */}
       <View style={styles.header}>
         <View>

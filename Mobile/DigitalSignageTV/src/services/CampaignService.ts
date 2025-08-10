@@ -1,5 +1,7 @@
 import DeviceActivationService from './DeviceActivationService';
 import ConfigService from './ConfigService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'react-native';
 
 interface MediaItem {
   media_id: number;
@@ -44,20 +46,38 @@ class CampaignService {
         // No campaign assigned
         return null;
       }
-      const errorData = await response.json();
+      // Try offline cache if allowed
+      try {
+        const cached = await AsyncStorage.getItem('TV_LAST_CAMPAIGN');
+        if (cached) return JSON.parse(cached);
+      } catch {}
+      const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.detail || 'Failed to get campaign');
     }
 
     const data: CampaignResponse = await response.json();
     
     // Transform the response to our Campaign interface
-    return {
+    const campaign: Campaign = {
       campaign_id: data.campaign,
       name: data.campaign_name || `Campaign ${data.campaign}`,
       media_items: data.media_items || [],
       is_active: true,
       normalize_to_orientation: data.normalize_to_orientation || 'none',
     };
+    try {
+      await AsyncStorage.setItem('TV_LAST_CAMPAIGN', JSON.stringify(campaign));
+      // Prefetch images to disk cache
+      await Promise.all(
+        (campaign.media_items || [])
+          .filter(m => m.media_type === 'image')
+          .map(async (m) => {
+            const url = await this.getMediaUrlAsync(m);
+            try { await Image.prefetch(url); } catch {}
+          })
+      );
+    } catch {}
+    return campaign;
   }
 
   /**

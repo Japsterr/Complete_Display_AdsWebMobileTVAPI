@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { isOfflineAllowed, saveCache, loadCache } from './OfflineService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuration
@@ -213,25 +214,46 @@ class ApiService {
 
   // Dashboard
   async getDashboardStats(): Promise<DashboardStats> {
-    // Get individual counts from each endpoint
-    const [campaigns, media, displays] = await Promise.all([
-      this.api.get('/campaigns/').catch(() => ({ data: [] })),
-      this.api.get('/media/').catch(() => ({ data: [] })),
-      this.api.get('/displays/').catch(() => ({ data: [] })),
-    ]);
-
-    return {
-      total_campaigns: campaigns.data.length || 0,
-      total_media: media.data.length || 0,
-      total_displays: displays.data.length || 0,
-      total_views: Math.floor(Math.random() * 50000), // Mock data
-    };
+    try {
+      // Online path: aggregate live counts
+      const [campaigns, media, displays] = await Promise.all([
+        this.api.get('/campaigns/'),
+        this.api.get('/media/'),
+        this.api.get('/displays/'),
+      ]);
+      const stats = {
+        total_campaigns: campaigns.data.length || 0,
+        total_media: media.data.length || 0,
+        total_displays: displays.data.length || 0,
+        total_views: Math.floor(Math.random() * 50000),
+      };
+      await saveCache('dashboardStats', stats);
+      return stats;
+    } catch (e) {
+      // Offline fallback within last-24h login window
+      if (await isOfflineAllowed(24)) {
+        const cached = await loadCache<DashboardStats>('dashboardStats');
+        if (cached) return cached;
+      }
+      // last resort
+      return { total_campaigns: 0, total_media: 0, total_displays: 0, total_views: 0 };
+    }
   }
 
   // Campaigns
   async getCampaigns(): Promise<Campaign[]> {
-    const response = await this.api.get<Campaign[]>('/campaigns/');
-    return response.data;
+    try {
+      const response = await this.api.get<Campaign[]>('/campaigns/');
+      const data = response.data;
+      await saveCache('campaigns', data);
+      return data;
+    } catch (e) {
+      if (await isOfflineAllowed(24)) {
+        const cached = await loadCache<Campaign[]>('campaigns');
+        if (cached) return cached;
+      }
+      throw e;
+    }
   }
 
   async createCampaign(campaignData: {
@@ -253,8 +275,18 @@ class ApiService {
 
   // Media
   async getMedia(): Promise<Media[]> {
-    const response = await this.api.get<Media[]>('/media/');
-    return response.data;
+    try {
+      const response = await this.api.get<Media[]>('/media/');
+      const data = response.data;
+      await saveCache('media', data);
+      return data;
+    } catch (e) {
+      if (await isOfflineAllowed(24)) {
+        const cached = await loadCache<Media[]>('media');
+        if (cached) return cached;
+      }
+      throw e;
+    }
   }
 
   async uploadMedia(formData: FormData): Promise<Media> {
@@ -272,8 +304,18 @@ class ApiService {
 
   // Displays
   async getDisplays(): Promise<Display[]> {
-    const response = await this.api.get<Display[]>('/displays/');
-    return response.data;
+    try {
+      const response = await this.api.get<Display[]>('/displays/');
+      const data = response.data;
+      await saveCache('displays', data);
+      return data;
+    } catch (e) {
+      if (await isOfflineAllowed(24)) {
+        const cached = await loadCache<Display[]>('displays');
+        if (cached) return cached;
+      }
+      throw e;
+    }
   }
 
   async createDisplay(displayData: {
