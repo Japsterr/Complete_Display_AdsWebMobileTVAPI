@@ -8,7 +8,8 @@ from .views import (
     device_heartbeat, record_media_impression, analytics_dashboard, health_check,
     analytics_summary, export_impressions_csv, export_devices_csv, analytics_campaign_breakdown,
     OrganizationViewSet, MembershipViewSet, InvitationViewSet, AuditLogViewSet,
-    DisplayGroupViewSet, TagViewSet, MediaApprovalViewSet
+    DisplayGroupViewSet, TagViewSet, MediaApprovalViewSet,
+    assign_campaign_to_displays, assign_campaign_to_group, broadcast_campaign, queue_campaign_for_displays
 )
 from .stripe_views import CreateCheckoutSessionView, get_stripe_config, stripe_webhook
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
@@ -58,6 +59,12 @@ urlpatterns = [
     path('analytics/campaign-breakdown/', analytics_campaign_breakdown, name='analytics-campaign-breakdown'),
     path('analytics/export/impressions.csv', export_impressions_csv, name='export-impressions-csv'),
     path('analytics/export/devices.csv', export_devices_csv, name='export-devices-csv'),
+
+    # Assignment & Broadcast
+    path('campaigns/assign/displays/', assign_campaign_to_displays, name='assign-campaign-displays'),
+    path('campaigns/assign/group/', assign_campaign_to_group, name='assign-campaign-group'),
+    path('campaigns/broadcast/', broadcast_campaign, name='broadcast-campaign'),
+    path('campaigns/queue/displays/', queue_campaign_for_displays, name='queue-campaign-displays'),
     
     # Stripe payment endpoints
     path('payments/create-checkout-session/', CreateCheckoutSessionView.as_view(), name='create-checkout-session'),

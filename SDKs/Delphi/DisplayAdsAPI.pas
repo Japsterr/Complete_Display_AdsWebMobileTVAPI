@@ -46,6 +46,11 @@ type
     function ListCampaigns: TJSONValue;
     function CreateCampaign(const Name, Orientation, NormalizeHint: string; const Description: string = ''): TJSONValue;
     function AddMediaToCampaign(CampaignId, MediaId: Integer; DurationSeconds, OrderIndex: Integer): TJSONValue;
+  // Campaign Assignment & Broadcast
+  function AssignCampaignToDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; const StartISO: string = ''; const EndISO: string = ''; Priority: Integer = 0): TJSONValue;
+  function AssignCampaignToGroup(CampaignId, GroupId: Integer; const StartISO: string = ''; const EndISO: string = ''; Priority: Integer = 0): TJSONValue;
+  function BroadcastCampaign(CampaignId: Integer; const StartISO: string = ''; const EndISO: string = ''; Priority: Integer = 0): TJSONValue;
+  function QueueCampaignForDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; DurationMinutes: Integer; Priority: Integer = 0): TJSONValue;
 
     // Displays & Activation
     function ListDisplays: TJSONValue;
@@ -301,6 +306,81 @@ begin
     Body.AddPair('display_duration_seconds', TJSONNumber.Create(DurationSeconds));
     Body.AddPair('order', TJSONNumber.Create(OrderIndex));
     Result := PostJson('/api/v1/campaign-media/', Body, True);
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDisplayAdsClient.AssignCampaignToDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; const StartISO, EndISO: string; Priority: Integer): TJSONValue;
+var Body: TJSONObject; Arr: TJSONArray; I: Integer;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('campaign_id', TJSONNumber.Create(CampaignId));
+    Arr := TJSONArray.Create;
+    for I := 0 to High(DisplayIds) do Arr.Add(DisplayIds[I]);
+    Body.AddPair('display_ids', Arr);
+    if (StartISO <> '') and (EndISO <> '') then
+    begin
+      Body.AddPair('start_datetime', StartISO);
+      Body.AddPair('end_datetime', EndISO);
+      Body.AddPair('priority', TJSONNumber.Create(Priority));
+    end;
+    Result := PostJson('/api/v1/campaigns/assign/displays/', Body, True);
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDisplayAdsClient.AssignCampaignToGroup(CampaignId, GroupId: Integer; const StartISO, EndISO: string; Priority: Integer): TJSONValue;
+var Body: TJSONObject;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('campaign_id', TJSONNumber.Create(CampaignId));
+    Body.AddPair('group_id', TJSONNumber.Create(GroupId));
+    if (StartISO <> '') and (EndISO <> '') then
+    begin
+      Body.AddPair('start_datetime', StartISO);
+      Body.AddPair('end_datetime', EndISO);
+      Body.AddPair('priority', TJSONNumber.Create(Priority));
+    end;
+    Result := PostJson('/api/v1/campaigns/assign/group/', Body, True);
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDisplayAdsClient.BroadcastCampaign(CampaignId: Integer; const StartISO, EndISO: string; Priority: Integer): TJSONValue;
+var Body: TJSONObject;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('campaign_id', TJSONNumber.Create(CampaignId));
+    if (StartISO <> '') and (EndISO <> '') then
+    begin
+      Body.AddPair('start_datetime', StartISO);
+      Body.AddPair('end_datetime', EndISO);
+      Body.AddPair('priority', TJSONNumber.Create(Priority));
+    end;
+    Result := PostJson('/api/v1/campaigns/broadcast/', Body, True);
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDisplayAdsClient.QueueCampaignForDisplays(CampaignId: Integer; const DisplayIds: TArray<Integer>; DurationMinutes: Integer; Priority: Integer): TJSONValue;
+var Body: TJSONObject; Arr: TJSONArray; I: Integer;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('campaign_id', TJSONNumber.Create(CampaignId));
+    Arr := TJSONArray.Create;
+    for I := 0 to High(DisplayIds) do Arr.Add(DisplayIds[I]);
+    Body.AddPair('display_ids', Arr);
+    Body.AddPair('duration_minutes', TJSONNumber.Create(DurationMinutes));
+    Body.AddPair('priority', TJSONNumber.Create(Priority));
+    Result := PostJson('/api/v1/campaigns/queue/displays/', Body, True);
   finally
     Body.Free;
   end;

@@ -30,6 +30,17 @@
 	- Prefetches images to improve resilience and reduce flicker.
 	- Continues sending heartbeats/impressions when online; if offline, telemetry can queue client-side and be retried (basic best-effort).
 
+	## Campaign assignment and broadcast
+
+	- Endpoints:
+		- POST /api/v1/campaigns/assign/displays/ — assign campaign to a list of display IDs (either default or scheduled if start/end provided)
+		- POST /api/v1/campaigns/assign/group/ — assign to a DisplayGroup by group_id (owner-scoped)
+		- POST /api/v1/campaigns/broadcast/ — assign to all user-accessible displays (default or scheduled)
+		- POST /api/v1/campaigns/queue/displays/ — append a scheduled window after the last existing schedule for each display
+
+	- Delphi SDK updated (SDKs/Delphi/DisplayAdsAPI.pas):
+		- AssignCampaignToDisplays, AssignCampaignToGroup, BroadcastCampaign, QueueCampaignForDisplays
+
 # 🚀 Complete DisplayAds SaaS Platform - Updated
 
 **A comprehensive digital signage SaaS platform with Web Dashboard, Mobile Management App, Android TV App, and Backend API**

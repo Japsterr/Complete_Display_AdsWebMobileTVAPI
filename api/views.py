@@ -77,7 +77,7 @@ from datetime import timedelta
 from .models import (
     Campaign, Media, Display, UserProfile, BusinessMember, 
     Schedule, RefreshToken as CustomRefreshToken, User, CampaignMedia,
-    DeviceHeartbeat, MediaImpression, CampaignSession
+    DeviceHeartbeat, MediaImpression, CampaignSession, DisplayGroup
 )
 from .serializers import (
     UserRegistrationSerializer, CampaignSerializer, MediaSerializer, 
@@ -1275,3 +1275,139 @@ def export_devices_csv(request):
             count,
         ])
     return response
+
+# === Assignment & Broadcast Endpoints ===
+
+def _get_user_displays(request):
+    user = request.user
+    if user.account_type == 'personal':
+        return Display.objects.filter(personal_user=user)
+    elif user.account_type == 'business' and hasattr(user, 'owned_business'):
+        return Display.objects.filter(business=user.owned_business)
+    return Display.objects.none()
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def assign_campaign_to_displays(request):
+    """Assign a campaign to specific displays.
+
+    Body: {
+      "campaign_id": number,
+      "display_ids": [number],
+      "start_datetime"?: ISO string,
+      "end_datetime"?: ISO string,
+      "priority"?: number
+    }
+    If start/end provided, creates Schedule entries; otherwise sets default_campaign.
+    """
+    campaign_id = request.data.get('campaign_id')
+    display_ids = request.data.get('display_ids') or []
+    start_dt = request.data.get('start_datetime')
+    end_dt = request.data.get('end_datetime')
+    priority = int(request.data.get('priority') or 0)
+
+    if not campaign_id or not isinstance(display_ids, list) or not display_ids:
+        return Response({'error': 'campaign_id and display_ids[] required'}, status=400)
+    try:
+        campaign = Campaign.objects.get(campaign_id=campaign_id)
+    except Campaign.DoesNotExist:
+        return Response({'error': 'Campaign not found'}, status=404)
+
+    allowed_displays = _get_user_displays(request).filter(display_id__in=display_ids)
+    modified = 0
+    created_schedules = []
+    if start_dt and end_dt:
+        # Create schedules
+        from django.utils.dateparse import parse_datetime
+        sdt = parse_datetime(start_dt)
+        edt = parse_datetime(end_dt)
+        if not sdt or not edt or edt <= sdt:
+            return Response({'error': 'Invalid start/end datetimes'}, status=400)
+        for d in allowed_displays:
+            sch = Schedule.objects.create(display=d, campaign=campaign, start_datetime=sdt, end_datetime=edt, priority=priority)
+            created_schedules.append(sch.schedule_id)
+            modified += 1
+    else:
+        # Set as default campaign
+        for d in allowed_displays:
+            d.default_campaign = campaign
+            d.save(update_fields=['default_campaign'])
+            modified += 1
+
+    return Response({'status': 'ok', 'modified': modified, 'schedules': created_schedules})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def assign_campaign_to_group(request):
+    """Assign a campaign to a display group. Supports schedule or default campaign.
+
+    Body: { campaign_id, group_id, start_datetime?, end_datetime?, priority? }
+    """
+    campaign_id = request.data.get('campaign_id')
+    group_id = request.data.get('group_id')
+    if not campaign_id or not group_id:
+        return Response({'error': 'campaign_id and group_id required'}, status=400)
+    try:
+        group = DisplayGroup.objects.get(id=group_id)
+    except DisplayGroup.DoesNotExist:
+        return Response({'error': 'Group not found'}, status=404)
+    # Ensure group ownership
+    user = request.user
+    if group.owner != user:
+        return Response({'error': 'Not allowed for this group'}, status=403)
+
+    # Collect displays intersecting with user-accessible ones
+    allowed_ids = list(_get_user_displays(request).values_list('display_id', flat=True))
+    group_displays = group.displays.filter(display_id__in=allowed_ids)
+
+    # Reuse logic
+    data = request.data.copy()
+    data['display_ids'] = list(group_displays.values_list('display_id', flat=True))
+    request._full_data = data  # hack: ensure data used below
+    return assign_campaign_to_displays(request)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def broadcast_campaign(request):
+    """Broadcast a campaign to all of the user's displays (personal/business context).
+    Supports optional schedule window; otherwise sets as default campaign.
+    Body: { campaign_id, start_datetime?, end_datetime?, priority? }
+    """
+    displays = _get_user_displays(request)
+    ids = list(displays.values_list('display_id', flat=True))
+    if not ids:
+        return Response({'error': 'No displays available'}, status=400)
+    data = request.data.copy()
+    data['display_ids'] = ids
+    request._full_data = data
+    return assign_campaign_to_displays(request)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def queue_campaign_for_displays(request):
+    """Queue a campaign for displays by appending a Schedule after the last scheduled window or now.
+
+    Body: { campaign_id, display_ids: [number], duration_minutes: number, priority?: number }
+    """
+    campaign_id = request.data.get('campaign_id')
+    display_ids = request.data.get('display_ids') or []
+    duration_minutes = int(request.data.get('duration_minutes') or 0)
+    priority = int(request.data.get('priority') or 0)
+    if not campaign_id or not isinstance(display_ids, list) or not display_ids or duration_minutes <= 0:
+        return Response({'error': 'campaign_id, display_ids[], and duration_minutes>0 required'}, status=400)
+    try:
+        campaign = Campaign.objects.get(campaign_id=campaign_id)
+    except Campaign.DoesNotExist:
+        return Response({'error': 'Campaign not found'}, status=404)
+    allowed_displays = _get_user_displays(request).filter(display_id__in=display_ids)
+    created = []
+    for d in allowed_displays:
+        # Find last schedule end time not in the past
+        last = d.schedules.order_by('-end_datetime').first()
+        start = timezone.now()
+        if last and last.end_datetime and last.end_datetime > start:
+            start = last.end_datetime
+        end = start + timedelta(minutes=duration_minutes)
+        sch = Schedule.objects.create(display=d, campaign=campaign, start_datetime=start, end_datetime=end, priority=priority)
+        created.append({'display_id': d.display_id, 'schedule_id': sch.schedule_id, 'start': start, 'end': end})
+    return Response({'status': 'ok', 'created': created})
