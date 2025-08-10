@@ -8,6 +8,8 @@ import {
   Dimensions,
 } from 'react-native';
 import CampaignService, {Campaign, MediaItem} from '../services/CampaignService';
+import AnalyticsService from '../services/AnalyticsService';
+import { HEARTBEAT_INTERVAL_MS } from '../config';
 
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
@@ -19,9 +21,14 @@ const PlayerScreen: React.FC = () => {
 
   useEffect(() => {
     loadCampaign();
+
+    // start heartbeat
+    const hb = setInterval(() => {
+      AnalyticsService.sendHeartbeat();
+    }, HEARTBEAT_INTERVAL_MS);
     
     // Start polling for campaign updates
-    const stopPolling = CampaignService.startPollingCampaign(
+  const stopPolling = CampaignService.startPollingCampaign(
       (updatedCampaign) => {
         setCampaign(updatedCampaign);
         if (updatedCampaign && updatedCampaign.media_items.length > 0) {
@@ -34,7 +41,7 @@ const PlayerScreen: React.FC = () => {
       }
     );
 
-    return () => stopPolling();
+  return () => { clearInterval(hb); stopPolling(); };
   }, []);
 
   // Auto-advance through media items
@@ -44,7 +51,21 @@ const PlayerScreen: React.FC = () => {
     const currentMedia = campaign.media_items[currentMediaIndex];
     const duration = currentMedia.duration * 1000; // Convert to milliseconds
 
+    // record impression completion upon advance
     const timer = setTimeout(() => {
+      // record impression
+      try {
+        AnalyticsService.recordImpression({
+          device_id: '', // filled on server via device_id; we still pass for completeness
+          media_id: currentMedia.media_id,
+          campaign_id: campaign.campaign_id,
+          duration_shown: currentMedia.duration,
+          scheduled_duration: currentMedia.duration,
+          completed: true,
+          sequence_number: currentMediaIndex + 1,
+          total_media_in_campaign: campaign.media_items.length,
+        });
+      } catch {}
       setCurrentMediaIndex((prevIndex) => 
         (prevIndex + 1) % campaign.media_items.length
       );

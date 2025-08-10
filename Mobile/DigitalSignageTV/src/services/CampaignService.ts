@@ -1,7 +1,5 @@
 import DeviceActivationService from './DeviceActivationService';
-
-// Configuration
-const BASE_URL = 'http://127.0.0.1:8000/api/v1';
+import { API_BASE } from '../config';
 
 interface MediaItem {
   media_id: number;
@@ -31,7 +29,7 @@ class CampaignService {
   async getCurrentCampaign(): Promise<Campaign | null> {
     const deviceId = DeviceActivationService.getDeviceId();
     
-    const response = await fetch(`${BASE_URL}/devices/current-campaign/?device_id=${deviceId}`, {
+  const response = await fetch(`${API_BASE}/devices/current-campaign/?device_id=${deviceId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -62,8 +60,13 @@ class CampaignService {
    * Get media URL for a media item
    */
   getMediaUrl(mediaItem: MediaItem): string {
-    // Construct full URL for media file
-    return `${BASE_URL.replace('/api/v1', '')}${mediaItem.file_path}`;
+    // If server already returned a full URL, use it as-is
+    if (mediaItem.file_path.startsWith('http://') || mediaItem.file_path.startsWith('https://')) {
+      return mediaItem.file_path;
+    }
+    // Otherwise, construct from API_BASE root
+    const root = API_BASE.replace('/api/v1', '');
+    return `${root}${mediaItem.file_path.startsWith('/') ? '' : '/'}${mediaItem.file_path}`;
   }
 
   /**
