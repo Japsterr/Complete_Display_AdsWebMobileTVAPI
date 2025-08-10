@@ -5,7 +5,13 @@ export const theme = extendTheme({
   config: { initialColorMode: 'dark', useSystemColorMode: false },
   styles: {
     global: {
-      body: { bg: tokenColors.surface.bg, color: tokenColors.surface.text },
+      'html, body': {
+        backgroundColor: tokenColors.surface.bg,
+        color: tokenColors.surface.text,
+      },
+      'section.alt': {
+        backgroundColor: tokenColors.surface.bgAlt,
+      },
     },
   },
   colors: {
@@ -23,9 +29,9 @@ export const theme = extendTheme({
           _hover: { bg: 'brand.400', boxShadow: shadows.glow },
         },
         outline: {
-          borderColor: 'brand.500',
-          color: 'brand.500',
-          _hover: { bg: 'rgba(255,107,53,0.08)' },
+          borderColor: 'brand.400',
+          color: 'brand.400',
+          _hover: { boxShadow: shadows.glow },
         },
       },
     },

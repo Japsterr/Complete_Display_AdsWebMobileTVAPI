@@ -130,7 +130,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           <StatCard
             title="Campaigns"
             value={stats?.total_campaigns || 0}
-            color="#007AFF"
+            color="#ff7a1a"
             onPress={() => navigation.navigate('Campaigns')}
           />
           <StatCard
@@ -144,7 +144,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           <StatCard
             title="Displays"
             value={stats?.total_displays || 0}
-            color="#FF9500"
+            color="#ff7a1a"
             onPress={() => navigation.navigate('Displays')}
           />
           <StatCard
@@ -205,13 +205,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+  backgroundColor: '#f5f6f8',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+  backgroundColor: '#f5f6f8',
   },
   loadingText: {
     fontSize: 16,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: 60,
-    backgroundColor: '#FFFFFF',
+  backgroundColor: '#FFFFFF',
   },
   welcomeText: {
     fontSize: 16,
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1D1D1F',
+  color: '#1d1f23',
   },
   logoutButton: {
     padding: 8,

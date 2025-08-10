@@ -5,74 +5,74 @@ const FeaturesPage: React.FC = () => {
     {
       icon: '📱',
       title: 'QR Code TV Activation',
-      description: 'Revolutionary mobile QR scanning to instantly activate TV displays. Point, scan, done!',
-      highlight: 'Industry First',
+      description: 'Activate any TV app in seconds from your phone. Scan the on-screen code to link and go—no logins on TV.',
+      highlight: 'Instant Setup',
       gradient: 'qr-highlight'
     },
     {
-      icon: '🌐',
-      title: 'Professional Web Dashboard',
-      description: 'Complete campaign management, media library, analytics, and team collaboration in one place.',
-      highlight: 'Full-Featured'
+      icon: '�️',
+      title: 'Unified Control Dashboard',
+      description: 'Plan, schedule, and monitor campaigns across locations with a clean, fast web UI.',
+      highlight: 'All-in-One'
     },
     {
       icon: '📊',
-      title: 'Real-Time Analytics',
-      description: 'Device heartbeats, media impressions, campaign performance, and detailed reporting.',
+      title: 'Live Playback Analytics',
+      description: 'See which screens are online, which campaign is playing, and impression counts in real time.',
       highlight: 'Live Data'
     },
     {
       icon: '🎬',
       title: 'Visual Campaign Builder',
-      description: 'Drag-and-drop playlist creator with scheduling, priorities, and automatic fallbacks.',
+      description: 'Build playlists, set priorities, and schedule windows—supports preempt for urgent takeovers.',
       highlight: 'Intuitive'
     },
     {
       icon: '📁',
       title: 'Smart Media Library',
-      description: 'Upload images & videos, organize by categories, with mobile camera integration.',
+      description: 'Upload images and videos, auto-detect formats, and reuse assets across campaigns.',
       highlight: 'Organized'
     },
     {
       icon: '📺',
       title: 'Display Management',
-      description: 'Monitor device status, assign campaigns, track performance across multiple locations.',
-      highlight: 'Scalable'
+      description: 'Assign defaults, queue next, broadcast to all, or target groups—with dry-run previews.',
+      highlight: 'Fleet Scale'
     },
     {
       icon: '👥',
       title: 'Team Collaboration',
-      description: 'Multi-user business accounts with role-based permissions (Owner, Admin, Editor, Viewer).',
+      description: 'Roles and permissions for business teams. Keep control while moving fast.',
       highlight: 'Business Ready'
     },
     {
       icon: '💳',
       title: 'Stripe Payment Integration',
-      description: 'Automated billing, subscription management, South African Rand (ZAR) support.',
+      description: 'Automated billing and subscriptions with local ZAR currency support.',
       highlight: 'Local Currency'
     },
     {
       icon: '📱',
-      title: 'Native Mobile App',
-      description: 'React Native app for iOS & Android with camera integration and offline capabilities.',
+      title: 'Mobile Manager App',
+      description: 'Scan to activate TVs, manage screens, and approve content—optimized for on-the-go.',
       highlight: 'Cross-Platform'
     },
     {
-      icon: '🔄',
-      title: 'Automatic Scheduling',
-      description: 'Smart campaign scheduling with priorities, recurring schedules, and conflict detection.',
-      highlight: 'Intelligent'
+      icon: '�️',
+      title: 'Scheduling & Preempt',
+      description: 'Priority-based playback, queue next window, and preempt for urgent messages.',
+      highlight: 'Control'
     },
     {
       icon: '🔐',
       title: 'Enterprise Security',
-      description: 'JWT authentication, role-based access, HTTPS encryption, and data protection.',
+      description: 'Secure by default: JWT auth, role-based access, and HTTPS throughout.',
       highlight: 'Secure'
     },
     {
       icon: '⚡',
       title: 'Real-Time Updates',
-      description: 'Live device monitoring, instant campaign updates, and heartbeat tracking.',
+      description: 'Instant campaign updates, TV heartbeats, and queue previews before changes apply.',
       highlight: 'Instant'
     }
   ];
@@ -131,7 +131,7 @@ const FeaturesPage: React.FC = () => {
       </section>
 
       {/* Core Features Grid */}
-  <section className="py-5" style={{ background: '#1a1b1e' }}>
+  <section className="py-5">
         <div className="container">
           <div className="row text-center mb-5">
             <div className="col-lg-8 mx-auto">
@@ -165,17 +165,17 @@ const FeaturesPage: React.FC = () => {
             ))}
           </div>
 
-          {/* QR Code Highlight Section */}
-          <div className="row mt-5">
+      {/* QR Code Highlight Section */}
+      <div className="row mt-5">
             <div className="col-12">
-              <div className="card text-white" style={{background: 'linear-gradient(135deg, rgba(255,107,53,0.2) 0%, rgba(255,146,95,0.2) 100%)', color: '#ffd6c5', border: '1px solid rgba(255,107,53,0.25)'}}>
+        <div className="card text-white" style={{background: 'linear-gradient(135deg, rgba(255,122,26,0.18) 0%, rgba(255,145,51,0.18) 100%)', color: '#ffe2cf', border: '1px solid rgba(255,122,26,0.28)'}}>
                 <div className="card-body p-5 text-center">
                   <div className="row align-items-center">
                     <div className="col-lg-8">
-                      <h3 className="fw-bold mb-3" style={{ color: '#ffd6c5' }}>
+                      <h3 className="fw-bold mb-3" style={{ color: '#ffe2cf' }}>
                         🎯 Game-Changing QR Code Activation
                       </h3>
-                      <p className="lead mb-0" style={{ color: '#ffd6c5' }}>
+                      <p className="lead mb-0" style={{ color: '#ffe2cf' }}>
                         The first digital signage platform where you can activate TV displays 
                         by simply scanning a QR code with your phone. No more manual setup, 
                         no more complicated activation processes.
@@ -193,7 +193,7 @@ const FeaturesPage: React.FC = () => {
       </section>
 
       {/* Competitive Advantages */}
-  <section className="py-5" style={{background: '#1e1f22', borderTop: '1px solid rgba(255,107,53,0.12)', borderBottom: '1px solid rgba(255,107,53,0.12)'}}>
+  <section className="py-5 alt" style={{ borderTop: '1px solid rgba(255,122,26,0.12)', borderBottom: '1px solid rgba(255,122,26,0.12)'}}>
         <div className="container">
           <div className="row text-center mb-5">
             <div className="col-lg-8 mx-auto">
@@ -209,7 +209,7 @@ const FeaturesPage: React.FC = () => {
           <div className="row g-4">
             {advantages.map((advantage, index) => (
               <div key={index} className="col-lg-6">
-                <div className="card h-100 hover-shadow" style={{ background: '#222325', border: '1px solid rgba(255,107,53,0.12)' }}>
+                <div className="card h-100 hover-shadow" style={{ background: '#24272d', border: '1px solid rgba(255,122,26,0.18)' }}>
                   <div className="card-body p-4">
                     <div className="d-flex align-items-start">
                       <div className="feature-icon me-4" style={{width: '60px', height: '60px', fontSize: '1.5rem'}}>
@@ -229,7 +229,7 @@ const FeaturesPage: React.FC = () => {
       </section>
 
       {/* Technical Stack */}
-  <section className="py-5" style={{ background: '#1a1b1e' }}>
+  <section className="py-5">
         <div className="container">
           <div className="row text-center mb-5">
             <div className="col-lg-8 mx-auto">
@@ -244,7 +244,7 @@ const FeaturesPage: React.FC = () => {
 
           <div className="row g-4">
             <div className="col-lg-3 col-md-6 text-center">
-              <div className="card hover-scale h-100" style={{ background: '#222325', border: '1px solid rgba(255,107,53,0.12)' }}>
+              <div className="card hover-scale h-100" style={{ background: '#24272d', border: '1px solid rgba(255,122,26,0.18)' }}>
                 <div className="card-body p-4">
                   <div className="feature-icon mb-3">⚛️</div>
                   <h5 className="fw-bold" style={{ color: '#e6e1e3' }}>React 19.1.0</h5>
@@ -253,7 +253,7 @@ const FeaturesPage: React.FC = () => {
               </div>
             </div>
             <div className="col-lg-3 col-md-6 text-center">
-              <div className="card hover-scale h-100" style={{ background: '#222325', border: '1px solid rgba(255,107,53,0.12)' }}>
+              <div className="card hover-scale h-100" style={{ background: '#24272d', border: '1px solid rgba(255,122,26,0.18)' }}>
                 <div className="card-body p-4">
                   <div className="feature-icon mb-3">📱</div>
                   <h5 className="fw-bold" style={{ color: '#e6e1e3' }}>React Native</h5>
@@ -262,7 +262,7 @@ const FeaturesPage: React.FC = () => {
               </div>
             </div>
             <div className="col-lg-3 col-md-6 text-center">
-              <div className="card hover-scale h-100" style={{ background: '#222325', border: '1px solid rgba(255,107,53,0.12)' }}>
+              <div className="card hover-scale h-100" style={{ background: '#24272d', border: '1px solid rgba(255,122,26,0.18)' }}>
                 <div className="card-body p-4">
                   <div className="feature-icon mb-3">🐍</div>
                   <h5 className="fw-bold" style={{ color: '#e6e1e3' }}>Django REST</h5>
@@ -271,7 +271,7 @@ const FeaturesPage: React.FC = () => {
               </div>
             </div>
             <div className="col-lg-3 col-md-6 text-center">
-              <div className="card hover-scale h-100" style={{ background: '#222325', border: '1px solid rgba(255,107,53,0.12)' }}>
+              <div className="card hover-scale h-100" style={{ background: '#24272d', border: '1px solid rgba(255,122,26,0.18)' }}>
                 <div className="card-body p-4">
                   <div className="feature-icon mb-3">💳</div>
                   <h5 className="fw-bold" style={{ color: '#e6e1e3' }}>Stripe</h5>
@@ -284,14 +284,14 @@ const FeaturesPage: React.FC = () => {
       </section>
 
       {/* Call to Action */}
-  <section className="py-5" style={{background: 'linear-gradient(135deg, rgba(255,107,53,0.2) 0%, rgba(255,146,95,0.15) 100%)', borderTop: '1px solid rgba(255,107,53,0.25)'}}>
+  <section className="py-5" style={{background: 'linear-gradient(135deg, rgba(255,122,26,0.20) 0%, rgba(255,145,51,0.15) 100%)', borderTop: '1px solid rgba(255,122,26,0.25)'}}>
         <div className="container">
           <div className="row text-center text-white">
             <div className="col-lg-8 mx-auto">
-              <h2 className="display-4 fw-bold mb-3" style={{ color: '#ffd6c5' }}>
+              <h2 className="display-4 fw-bold mb-3" style={{ color: '#ffe2cf' }}>
                 Ready to Transform Your Digital Signage?
               </h2>
-              <p className="lead mb-4 opacity-90" style={{ color: '#ffd6c5' }}>
+              <p className="lead mb-4 opacity-90" style={{ color: '#ffe2cf' }}>
                 Join the mobile-first revolution in digital signage. Start with our free plan today 
                 and experience the power of QR code activation.
               </p>

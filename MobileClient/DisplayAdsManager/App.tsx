@@ -109,14 +109,22 @@ export default function App(): React.JSX.Element {
   return (
     <AuthProvider>
       <ApiProvider>
-        <NavigationContainer>
+        <NavigationContainer theme={{
+          dark: false,
+          colors: {
+            primary: '#ff7a1a',
+            background: '#f5f6f8',
+            card: '#ffffff',
+            text: '#1d1f23',
+            border: 'rgba(0,0,0,0.08)',
+            notification: '#ff7a1a',
+          },
+        }}>
           <Stack.Navigator 
             initialRouteName="Login"
             screenOptions={{
-              headerStyle: {
-                backgroundColor: '#007AFF',
-              },
-              headerTintColor: '#FFFFFF',
+              headerStyle: { backgroundColor: '#ff7a1a' },
+              headerTintColor: '#1d1f23',
               headerTitleStyle: {
                 fontWeight: 'bold',
               },

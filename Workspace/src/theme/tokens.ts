@@ -1,23 +1,27 @@
 // Central theme tokens for brand and surfaces
 export const colors = {
+  // Brighter, more vivid brand orange with a warmer ramp
   brand: {
-    50: '#fff0e6',
-    100: '#ffd6bf',
-    200: '#ffb999',
-    300: '#ff9b73',
-    400: '#ff7e4d',
-    500: '#ff6b35',
-    600: '#e65f2f',
-    700: '#cc532a',
-    800: '#b34724',
-    900: '#993b1f',
+    50: '#fff3e8',
+    100: '#ffe0c2',
+    200: '#ffc592',
+    300: '#ffa660',
+    400: '#ff9133',
+    500: '#ff7a1a',
+    600: '#e96d10',
+    700: '#c55c0e',
+    800: '#a24a0c',
+    900: '#7f3909',
   },
+  // Two-tone dark surfaces (less harsh), with accent border
   surface: {
-    bg: '#1a1b1e',
-    card: '#222325',
-    border: 'rgba(255,107,53,0.25)',
-    text: '#e6e1e3',
-    muted: '#a8b0b8',
+    bg: '#1d1f23',      // primary page background
+    bgAlt: '#23262b',   // alternate dark band background
+    card: '#24272d',    // card background
+    cardAlt: '#2a2e35', // elevated card background
+    border: 'rgba(255,122,26,0.30)',
+    text: '#e8eaee',
+    muted: '#aeb6bf',
   },
 };
 
@@ -29,5 +33,6 @@ export const radii = {
 };
 
 export const shadows = {
-  glow: '0 0 0 3px rgba(255,107,53,0.2)',
+  // Softer but visible orange glow for focus/hover rings
+  glow: '0 0 0 4px rgba(255,122,26,0.22), 0 10px 20px rgba(0,0,0,0.25)',
 };
