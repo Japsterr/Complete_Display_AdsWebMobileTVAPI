@@ -12,6 +12,10 @@
 - TV app: on the Activation screen, use “Change Server URL” to override at runtime; persists via AsyncStorage. Default remains src/config.ts.
 - Mobile Manager: API base can be overridden at runtime and persisted; wire a simple settings UI to call ApiService.setBaseUrl(url) if needed.
 
+### New
+- Manager app now includes a Settings tab to change the API base URL at runtime and test connectivity via /health.
+- TV app respects campaign normalize_to_orientation (portrait/landscape) by rotating the wrapper when device orientation mismatches. Media uses resizeMode="contain" to avoid stretching.
+
 # 🚀 Complete DisplayAds SaaS Platform - Updated
 
 **A comprehensive digital signage SaaS platform with Web Dashboard, Mobile Management App, Android TV App, and Backend API**

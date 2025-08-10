@@ -40,8 +40,8 @@ export default function SettingsScreen() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await api.getHealth?.();
-      if (res && res.status === 'ok') {
+  const res = await api.getHealth?.();
+  if (res && (res.status === 'ok' || res.status === 'healthy')) {
         setTestResult('✅ API reachable');
       } else {
         // fallback: try campaigns (auth may be required)

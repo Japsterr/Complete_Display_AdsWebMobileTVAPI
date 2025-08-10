@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import CampaignService, {Campaign, MediaItem} from '../services/CampaignService'
 import AnalyticsService from '../services/AnalyticsService';
 import { HEARTBEAT_INTERVAL_MS } from '../config';
 
-const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
+const getDims = () => Dimensions.get('window');
+let {width: screenWidth, height: screenHeight} = getDims();
 
 const PlayerScreen: React.FC = () => {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -44,6 +45,23 @@ const PlayerScreen: React.FC = () => {
 
   return () => { clearInterval(hb); stopPolling(); };
   }, []);
+
+  // Track orientation changes
+  useEffect(() => {
+    const sub = Dimensions.addEventListener('change', ({window}) => {
+      screenWidth = window.width; // update module vars
+      screenHeight = window.height;
+      // trigger rerender
+      setDimsVersion(v => v + 1);
+    });
+    return () => {
+      // RN >= 0.65 returns subscription with remove(); in newer versions, removeEventListener is deprecated
+      // @ts-ignore
+      sub?.remove?.();
+    };
+  }, []);
+
+  const [dimsVersion, setDimsVersion] = useState(0);
 
   // Auto-advance through media items (images use timer; videos advance on onEnd)
   useEffect(() => {
@@ -141,21 +159,34 @@ const PlayerScreen: React.FC = () => {
     })();
   }, [currentMedia]);
 
+  const normalize = campaign?.normalize_to_orientation || 'none';
+  const wrapperStyle = useMemo(() => {
+    const isLandscapeDevice = screenWidth >= screenHeight;
+    if (normalize === 'portrait' && isLandscapeDevice) {
+      return [styles.wrapper, { width: screenHeight, height: screenWidth, transform: [{ rotate: '90deg' }] }];
+    }
+    if (normalize === 'landscape' && !isLandscapeDevice) {
+      return [styles.wrapper, { width: screenHeight, height: screenWidth, transform: [{ rotate: '-90deg' }] }];
+    }
+    return [styles.wrapper, { width: screenWidth, height: screenHeight }];
+  }, [normalize, dimsVersion]);
+
   return (
     <View style={styles.container}>
-    {currentMedia.media_type === 'image' ? (
-        <Image
-          source={{uri: mediaUrl}}
-      style={styles.media}
-      resizeMode="contain"
-        />
-      ) : (
-        <Video
-          source={{uri: mediaUrl}}
-          style={styles.media}
-          resizeMode="contain"
-          paused={false}
-          onEnd={() => {
+      <View style={wrapperStyle as any}>
+        {currentMedia.media_type === 'image' ? (
+          <Image
+            source={{uri: mediaUrl}}
+            style={styles.mediaInner}
+            resizeMode="contain"
+          />
+        ) : (
+          <Video
+            source={{uri: mediaUrl}}
+            style={styles.mediaInner}
+            resizeMode="contain"
+            paused={false}
+            onEnd={() => {
             try {
               AnalyticsService.recordImpression({
                 device_id: '',
@@ -169,10 +200,11 @@ const PlayerScreen: React.FC = () => {
               });
             } catch {}
             setCurrentMediaIndex((prevIndex) => (prevIndex + 1) % campaign.media_items.length);
-          }}
-          onError={(e: any) => setError(`Video error: ${JSON.stringify((e && (e.nativeEvent || e)) || {})}`)}
-        />
-      )}
+            }}
+            onError={(e: any) => setError(`Video error: ${JSON.stringify((e && (e.nativeEvent || e)) || {})}`)}
+          />
+        )}
+      </View>
       
       {/* Campaign info overlay (can be hidden in production) */}
       <View style={styles.infoOverlay}>
@@ -194,9 +226,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  media: {
-    width: screenWidth,
-    height: screenHeight,
+  wrapper: {
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mediaInner: {
+    width: '100%',
+    height: '100%',
   },
   videoPlaceholder: {
     width: screenWidth,

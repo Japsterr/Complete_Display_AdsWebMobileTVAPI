@@ -14,10 +14,13 @@ interface Campaign {
   name: string;
   media_items: MediaItem[];
   is_active: boolean;
+  normalize_to_orientation?: 'none' | 'portrait' | 'landscape';
 }
 
 interface CampaignResponse {
   campaign: number;
+  campaign_name?: string;
+  normalize_to_orientation?: 'none' | 'portrait' | 'landscape';
   schedule?: any;
   media_items?: MediaItem[];
 }
@@ -50,9 +53,10 @@ class CampaignService {
     // Transform the response to our Campaign interface
     return {
       campaign_id: data.campaign,
-      name: `Campaign ${data.campaign}`,
+      name: data.campaign_name || `Campaign ${data.campaign}`,
       media_items: data.media_items || [],
       is_active: true,
+      normalize_to_orientation: data.normalize_to_orientation || 'none',
     };
   }
 
