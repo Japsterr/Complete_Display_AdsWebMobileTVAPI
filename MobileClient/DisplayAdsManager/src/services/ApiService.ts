@@ -331,6 +331,25 @@ class ApiService {
       };
     }
   }
+
+  // Health
+  async getHealth(): Promise<{ status: string; [key: string]: any }> {
+    try {
+      // Prefer explicit health endpoint if available
+      const base = await this.getBaseUrl();
+      const url = base.endsWith('/') ? `${base}health/` : `${base}/health/`;
+      const response = await axios.get(url, { timeout: 5000 });
+      return response.data;
+    } catch (e) {
+      // Fallback: simple ping using a lightweight public endpoint
+      try {
+        await this.api.get('/');
+        return { status: 'ok' };
+      } catch (e2) {
+        throw e2;
+      }
+    }
+  }
 }
 
 export default new ApiService();

@@ -33,6 +33,7 @@ import {
   MediaUploadScreen, 
   DisplayDetailScreen 
 } from './src/screens/PlaceholderScreens';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -89,6 +90,15 @@ function MainTabs() {
         options={{
           tabBarLabel: 'Displays',
           headerShown: false,
+        }}
+      />
+      <Tab.Screen 
+        name="Settings" 
+        component={SettingsScreen}
+        options={{
+          tabBarLabel: 'Settings',
+          headerShown: true,
+          title: 'Settings',
         }}
       />
     </Tab.Navigator>
