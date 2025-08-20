@@ -6,6 +6,9 @@ from rest_framework.decorators import api_view, permission_classes
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
 import random
 import string
 from .models import (
@@ -16,7 +19,8 @@ from .models import (
 from .serializers import (
     UserRegistrationSerializer, CampaignSerializer, MediaSerializer, 
     DisplaySerializer, UserProfileSerializer, ScheduleSerializer, UserSerializer,
-    CampaignMediaSerializer
+    CampaignMediaSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
+    EmailVerificationSerializer, ResendVerificationSerializer
 )
 from .permissions import IsOwnerOrBusinessMember
 
@@ -45,20 +49,35 @@ class UserRegistrationView(generics.CreateAPIView):
             try:
                 user = serializer.save()
                 
-                # Generate JWT tokens for immediate login
-                from rest_framework_simplejwt.tokens import RefreshToken
-                refresh = RefreshToken.for_user(user)
+                # Create email verification token
+                from .models import EmailVerificationToken
+                verification_token = EmailVerificationToken.objects.create(user=user)
+                
+                # Generate verification URL (adapt this based on your frontend)
+                verification_url = f"{settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS else 'localhost:3000'}/verify-email?token={verification_token.token}"
+                
+                # Send verification email
+                context = {
+                    'user': user,
+                    'verification_url': verification_url,
+                    'token': verification_token.token
+                }
+                
+                html_message = render_to_string('email/email_verification.html', context)
+                
+                send_mail(
+                    subject='Verify Your DisplayAds Email Address',
+                    message=f'Click this link to verify your email: {verification_url}',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
                 
                 return Response({
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh),
-                    'user': {
-                        'id': user.id,
-                        'email': user.email,
-                        'account_type': user.account_type,
-                            'plan': user.plan.plan_name if user.plan else 'Free'
-                    },
-                    'message': 'Registration successful! Welcome to DisplayAds.'
+                    'message': 'Registration successful! Please check your email to verify your account before logging in.',
+                    'email': user.email,
+                    'verification_required': True
                 }, status=status.HTTP_201_CREATED)
                 
             except Exception as e:
@@ -103,36 +122,38 @@ class CustomLoginView(APIView):
         try:
             user_check = User.objects.get(email=email)
             print(f"User found: {user_check.email}, Active: {user_check.is_active}")
-        except User.DoesNotExist:
-            print(f"User not found: {email}")
-            return Response(
-                {'detail': 'Invalid credentials.'}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        
-        # Authenticate user
-        user = authenticate(username=email, password=password)
-        print(f"Authentication result: {user}")
-        
-        if user is not None:
-            if user.is_active:
-                # Generate JWT tokens
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh),
-                    'user': {
-                        'id': user.id,
-                        'email': user.email,
-                        'account_type': user.account_type,
-                    }
-                })
+            
+            # Check password manually for inactive users
+            if user_check.check_password(password):
+                if user_check.is_active:
+                    # Generate JWT tokens
+                    refresh = RefreshToken.for_user(user_check)
+                    return Response({
+                        'access': str(refresh.access_token),
+                        'refresh': str(refresh),
+                        'user': {
+                            'id': user_check.id,
+                            'email': user_check.email,
+                            'account_type': user_check.account_type,
+                        }
+                    })
+                else:
+                    return Response(
+                        {
+                            'detail': 'Please verify your email address before logging in.',
+                            'email_verification_required': True,
+                            'email': user_check.email
+                        }, 
+                        status=status.HTTP_401_UNAUTHORIZED
+                    )
             else:
                 return Response(
-                    {'detail': 'Account is disabled.'}, 
+                    {'detail': 'Invalid credentials.'}, 
                     status=status.HTTP_401_UNAUTHORIZED
                 )
-        else:
+                
+        except User.DoesNotExist:
+            print(f"User not found: {email}")
             return Response(
                 {'detail': 'Invalid credentials.'}, 
                 status=status.HTTP_401_UNAUTHORIZED
@@ -794,3 +815,147 @@ def analytics_dashboard(request):
             for imp in recent_impressions
         ]
     })
+
+# --- Email Verification and Password Reset Views ---
+
+class PasswordResetRequestView(APIView):
+    """Request a password reset token"""
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            
+            try:
+                user = User.objects.get(email=email)
+                
+                # Create or update password reset token
+                from .models import PasswordResetToken
+                # Invalidate any existing tokens
+                PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
+                
+                # Create new token
+                reset_token = PasswordResetToken.objects.create(user=user)
+                
+                # Generate reset URL (adapt this based on your frontend)
+                reset_url = f"{settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS else 'localhost:3000'}/reset-password?token={reset_token.token}"
+                
+                # Send password reset email
+                context = {
+                    'user': user,
+                    'reset_url': reset_url,
+                    'token': reset_token.token
+                }
+                
+                html_message = render_to_string('email/password_reset.html', context)
+                
+                send_mail(
+                    subject='Reset Your DisplayAds Password',
+                    message=f'Click this link to reset your password: {reset_url}',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                
+            except User.DoesNotExist:
+                # Don't reveal that user doesn't exist for security
+                pass
+            
+            return Response({
+                'message': 'If an account with that email exists, we have sent a password reset link.'
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PasswordResetConfirmView(APIView):
+    """Confirm password reset with token"""
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            
+            return Response({
+                'message': 'Password has been reset successfully. You can now log in with your new password.'
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class EmailVerificationView(APIView):
+    """Verify email address with token"""
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = EmailVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            
+            return Response({
+                'message': 'Email verified successfully. Your account is now active.',
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'is_active': user.is_active
+                }
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ResendVerificationEmailView(APIView):
+    """Resend email verification"""
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = ResendVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            
+            try:
+                user = User.objects.get(email=email)
+                
+                # Create or update email verification token
+                from .models import EmailVerificationToken
+                verification_token, created = EmailVerificationToken.objects.get_or_create(
+                    user=user,
+                    defaults={'is_used': False}
+                )
+                
+                if not created:
+                    # Reset existing token
+                    verification_token.is_used = False
+                    verification_token.save()
+                
+                # Generate verification URL (adapt this based on your frontend)
+                verification_url = f"{settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS else 'localhost:3000'}/verify-email?token={verification_token.token}"
+                
+                # Send verification email
+                context = {
+                    'user': user,
+                    'verification_url': verification_url,
+                    'token': verification_token.token
+                }
+                
+                html_message = render_to_string('email/email_verification.html', context)
+                
+                send_mail(
+                    subject='Verify Your DisplayAds Email Address',
+                    message=f'Click this link to verify your email: {verification_url}',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                
+                return Response({
+                    'message': 'Verification email sent successfully.'
+                }, status=status.HTTP_200_OK)
+                
+            except User.DoesNotExist:
+                return Response({
+                    'error': 'User not found.'
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

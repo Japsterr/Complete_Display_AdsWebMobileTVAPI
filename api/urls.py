@@ -5,7 +5,9 @@ from .views import (
     TeamInviteView, AndroidTVDisplayView, LogoutView, UserProfileViewSet, user_profile,
     CustomLoginView, CampaignMediaViewSet, request_activation_code, activate_device, 
     check_activation_status, get_device_campaign, tv_simulator_view,
-    device_heartbeat, record_media_impression, analytics_dashboard, health_check
+    device_heartbeat, record_media_impression, analytics_dashboard, health_check,
+    PasswordResetRequestView, PasswordResetConfirmView, EmailVerificationView,
+    ResendVerificationEmailView
 )
 from .stripe_views import CreateCheckoutSessionView, get_stripe_config, stripe_webhook
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
@@ -27,6 +29,13 @@ urlpatterns = [
     path('login-simple/', TokenObtainPairView.as_view(), name='login_simple'),  # Test this
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    
+    # Email verification and password reset endpoints
+    path('auth/password-reset-request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
+    path('auth/password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
+    path('auth/verify-email/', EmailVerificationView.as_view(), name='verify-email'),
+    path('auth/resend-verification/', ResendVerificationEmailView.as_view(), name='resend-verification'),
+    
     path('auth/profile/', user_profile, name='user_profile'),
     path('team/invite/', TeamInviteView.as_view(), name='team-invite'),
     path('android-tv/', AndroidTVDisplayView.as_view(), name='android-tv'),

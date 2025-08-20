@@ -85,12 +85,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                         has_video_support=False
                     )
                 
-                # Create user with free plan
+                # Create user with free plan (inactive until email verified)
                 user = User.objects.create_user(
                     email=validated_data['email'],
                     password=validated_data['password'],
                     account_type=validated_data.get('account_type', 'personal'),
-                    plan=free_plan
+                    plan=free_plan,
+                    is_active=False  # User starts as inactive until email verified
                 )
                 
                 # Create user profile
@@ -208,3 +209,93 @@ class StripePaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = StripePayment
         fields = '__all__'
+
+# --- Email Verification and Password Reset Serializers ---
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Serializer for requesting a password reset"""
+    email = serializers.EmailField()
+    
+    def validate_email(self, value):
+        from .models import User
+        try:
+            user = User.objects.get(email=value)
+            if not user.is_active:
+                raise serializers.ValidationError("User account is not active.")
+        except User.DoesNotExist:
+            # Don't reveal that the user doesn't exist for security
+            pass
+        return value
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer for confirming password reset with token"""
+    token = serializers.CharField(max_length=64)
+    new_password = serializers.CharField(min_length=6, write_only=True)
+    
+    def validate_new_password(self, value):
+        if len(value) < 6:
+            raise serializers.ValidationError("Password must be at least 6 characters long.")
+        return value
+    
+    def validate_token(self, value):
+        from .models import PasswordResetToken
+        try:
+            token_obj = PasswordResetToken.objects.get(token=value)
+            if not token_obj.is_valid():
+                raise serializers.ValidationError("Token is invalid or expired.")
+            self.token_obj = token_obj
+        except PasswordResetToken.DoesNotExist:
+            raise serializers.ValidationError("Token is invalid.")
+        return value
+    
+    def save(self):
+        """Reset the user's password"""
+        user = self.token_obj.user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        
+        # Mark token as used
+        self.token_obj.is_used = True
+        self.token_obj.save()
+        
+        return user
+
+class EmailVerificationSerializer(serializers.Serializer):
+    """Serializer for email verification"""
+    token = serializers.CharField(max_length=64)
+    
+    def validate_token(self, value):
+        from .models import EmailVerificationToken
+        try:
+            token_obj = EmailVerificationToken.objects.get(token=value)
+            if not token_obj.is_valid():
+                raise serializers.ValidationError("Token is invalid or expired.")
+            self.token_obj = token_obj
+        except EmailVerificationToken.DoesNotExist:
+            raise serializers.ValidationError("Token is invalid.")
+        return value
+    
+    def save(self):
+        """Verify the user's email and activate account"""
+        user = self.token_obj.user
+        user.is_active = True
+        user.save()
+        
+        # Mark token as used
+        self.token_obj.is_used = True
+        self.token_obj.save()
+        
+        return user
+
+class ResendVerificationSerializer(serializers.Serializer):
+    """Serializer for resending email verification"""
+    email = serializers.EmailField()
+    
+    def validate_email(self, value):
+        from .models import User
+        try:
+            user = User.objects.get(email=value)
+            if user.is_active:
+                raise serializers.ValidationError("User account is already verified.")
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found.")
+        return value
