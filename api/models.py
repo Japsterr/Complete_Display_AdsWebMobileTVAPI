@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from .managers import CustomUserManager
+import secrets
+from django.utils import timezone
+from datetime import timedelta
 
 # --- Core Models ---
 class Plan(models.Model):
@@ -501,3 +504,62 @@ class CampaignSession(models.Model):
             models.Index(fields=['display', '-started_at']),
             models.Index(fields=['campaign', '-started_at']),
         ]
+
+# --- Email Verification and Password Reset Models ---
+class EmailVerificationToken(models.Model):
+    """Email verification tokens for new user registrations"""
+    user = models.OneToOneField('User', on_delete=models.CASCADE, related_name='email_verification')
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'EmailVerificationTokens'
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = secrets.token_urlsafe(32)
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=1)  # 24 hour expiry
+        super().save(*args, **kwargs)
+    
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    def is_valid(self):
+        return not self.is_used and not self.is_expired()
+    
+    def __str__(self):
+        return f"Email verification for {self.user.email}"
+
+class PasswordResetToken(models.Model):
+    """Password reset tokens for forgot password functionality"""
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='password_reset_tokens')
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'PasswordResetTokens'
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = secrets.token_urlsafe(32)
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=1)  # 1 hour expiry
+        super().save(*args, **kwargs)
+    
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    def is_valid(self):
+        return not self.is_used and not self.is_expired()
+    
+    def __str__(self):
+        return f"Password reset for {self.user.email}"
