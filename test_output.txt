@@ -1,0 +1,14 @@
+Found 1 test(s).
+Skipping setup of unused database(s): default.
+System check identified no issues (0 silenced).
+test_reorder_menu (unittest.loader._FailedTest.test_reorder_menu) ... ERROR
+
+======================================================================
+ERROR: test_reorder_menu (unittest.loader._FailedTest.test_reorder_menu)
+----------------------------------------------------------------------
+AttributeError: module 'api.tests' has no attribute 'test_reorder_menu'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (errors=1)

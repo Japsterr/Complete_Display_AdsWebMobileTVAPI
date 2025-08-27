@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v3.0.5
+    command:
+      - --global.checkNewVersion=true
+      - --global.sendAnonymousUsage=true
+      - --log.level=INFO
+      - --api.insecure=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.email=you@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Traefik dashboard - protect this in production
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    restart: unless-stopped
+    networks:
+      - traefik
+
+volumes:
+  traefik_letsencrypt:
+
+networks:
+  traefik:
+    external: true
+
+# Notes:
+# - Create an external network named 'traefik' at the docker host before deploying this stack:
+#     docker network create traefik
+# - Edit the email in the command above to a valid address used for Let's Encrypt registration.
+# - This Traefik config uses TLS-ALPN or TLS challenge; depending on your provider and ports you may need to use the HTTP challenge instead.
+# - In Portainer, deploy Traefik first and ensure the external network 'traefik' exists and is attached to other stacks that need routing.

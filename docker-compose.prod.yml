@@ -1,0 +1,97 @@
+version: "3.8"
+
+# Production-ready docker-compose for deploying via Portainer (edit image names before use)
+# Replace the image names with the images you push to your registry (DockerHub, GHCR, or private registry)
+
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: displayads
+      POSTGRES_USER: displayadsuser
+      # Use Docker secrets in Portainer: create secret 'postgres_password' and attach it to the stack
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      # Use Docker secrets in Portainer: create secret 'minio_root_password'
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - backend
+    # Consider firewalling these ports or proxying via a secure reverse proxy in production
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+
+  api:
+    # Replace this image with the image produced by your CI (example: ghcr.io/<org>/displayads-api:latest)
+  image: ghcr.io/japsterr/displayads-api:latest
+    restart: unless-stopped
+    environment:
+      DJANGO_DB_HOST: postgres
+      DJANGO_DB_NAME: displayads
+      DJANGO_DB_USER: displayadsuser
+      DJANGO_DB_PASSWORD_FILE: /run/secrets/postgres_password
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: "*"  # Replace with your domain in production
+      MINIO_ENDPOINT_URL: http://minio:9000
+      MINIO_BUCKET_NAME: media
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+    depends_on:
+      - postgres
+      - minio
+    volumes:
+      - media_data:/app/media
+    networks:
+      - backend
+      - frontend_net
+
+  frontend:
+    # Replace this image with the image produced by your CI (example: ghcr.io/<org>/displayads-frontend:latest)
+  image: ghcr.io/japsterr/displayads-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:5173"  # optional; for production, prefer a reverse proxy (Traefik/Nginx) instead
+    networks:
+      - frontend_net
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.displayads.rule: "Host(`displayads.example.com`)"
+        traefik.http.routers.displayads.entrypoints: "websecure"
+        traefik.http.routers.displayads.tls: "true"
+        traefik.http.services.displayads.loadbalancer.server.port: "5173"
+
+volumes:
+  postgres_data:
+  media_data:
+  minio_data:
+
+networks:
+  backend:
+  frontend_net:
+
+secrets:
+  postgres_password:
+    external: true
+  minio_root_password:
+    external: true
+
+# Notes:
+# - Create Docker secrets named `postgres_password` and `minio_root_password` in Portainer, then deploy this stack and attach those secrets.
+# - Replace `REPLACE_WITH_REGISTRY/...` with your registry and repository names.
+# - Don't expose Postgres to the public internet (remove any host port mapping for Postgres in production).
+# - Use a reverse proxy (Traefik, Nginx Proxy Manager, Caddy) to provide TLS/HTTPS and route to `frontend` and `api`.
+# - After first deploy, run migrations and create superuser by executing `python manage.py migrate` and `python manage.py createsuperuser` inside the `api` container (Portainer Console or docker exec).

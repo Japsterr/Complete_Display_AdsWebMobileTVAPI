@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Menu Board</title>
+    <style>
+      html,body { height:100%; margin:0 }
+      body { font-family: Arial, Helvetica, sans-serif; background:#111; color:#fff; margin:0; padding:0 }
+      .wrapper { display:flex; flex-direction:column; align-items:center; padding:20px; height:100% }
+      .menu-title { font-size:48px; margin-bottom:10px }
+      .categories { display:flex; gap:24px; width:100%; justify-content:center; flex:1; align-items:flex-start }
+      .category { width:320px; background:rgba(255,255,255,0.03); border-radius:8px; padding-bottom:8px }
+      .category h3 { background:#222; color:#fff; padding:12px; margin:0 0 8px 0; border-radius:8px 8px 0 0 }
+      .item { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.03); display:flex; justify-content:space-between; align-items:center }
+      .item .name { font-weight:700 }
+      .price { color:#8ef58e; font-weight:700 }
+      .featured { font-size:20px; padding:12px; background:linear-gradient(90deg,#ff9a9e,#fad0c4); color:#111; border-radius:8px; margin:12px; }
+      .fullscreen { width:100vw; height:100vh; padding:28px }
+      .centered { display:flex; align-items:center; justify-content:center }
+    </style>
+  </head>
+  <body>
+    <div id="root" class="wrapper">
+      <div id="menu-title" class="menu-title">Menu</div>
+      <div id="featured" style="width:100%;max-width:1200px"></div>
+      <div id="categories" class="categories"></div>
+    </div>
+
+    <script>
+  // config via querystring: ?menu=1&autorefresh=30&rotate=8&mode=fullscreen
+  const qs = new URLSearchParams(location.search);
+  const autoRefresh = parseInt(qs.get('autorefresh')||qs.get('refresh')||0,10) || 0;
+  const rotateSec = parseInt(qs.get('rotate')||0,10) || 0;
+  const mode = qs.get('mode') || '';
+
+  async function loadMenu(menuId){
+        try{
+          const resp = await fetch(`/api/v1/menus/${menuId}/`);
+          if(!resp.ok) throw new Error('Failed to load menu');
+          const data = await resp.json();
+          document.getElementById('menu-title').textContent = data.name || 'Menu';
+          const cats = data.categories || [];
+          const items = data.items || [];
+          const container = document.getElementById('categories');
+          container.innerHTML = '';
+          // Featured rotation: pick items marked available and rotate them
+          const featuredEl = document.getElementById('featured');
+          featuredEl.innerHTML = '';
+          const featuredCandidates = items.filter(i=>i.available).slice(0,20);
+          if(featuredCandidates.length){
+            const first = featuredCandidates[0];
+            featuredEl.innerHTML = `<div class="featured centered"><div><strong>${first.name}</strong><div style="font-size:18px">${first.description||''}</div><div style="margin-top:6px">${first.price} ${first.currency}</div></div></div>`;
+          }
+          // Map items into categories
+          const byCat = {};
+          items.forEach(it => {
+            const cid = it.category || 0;
+            byCat[cid] = byCat[cid] || [];
+            byCat[cid].push(it);
+          });
+
+          // Render categories (include uncategorized)
+          if(cats.length === 0){
+            // Build default category from items
+            const div = document.createElement('div'); div.className='category';
+            const h = document.createElement('h3'); h.textContent = 'Items'; div.appendChild(h);
+            (byCat[0]||[]).forEach(it => {
+              const row = document.createElement('div'); row.className='item';
+              row.innerHTML = `<span class="name">${it.name}</span><span class="price">${it.price} ${it.currency}</span>`;
+              div.appendChild(row);
+            });
+            container.appendChild(div);
+          } else {
+            cats.forEach(cat => {
+              const div = document.createElement('div'); div.className='category';
+              const h = document.createElement('h3'); h.textContent = cat.name; div.appendChild(h);
+              const list = byCat[cat.category_id] || [];
+              list.forEach(it => {
+                const row = document.createElement('div'); row.className='item';
+                row.innerHTML = `<span class="name">${it.name}</span><span class="price">${it.price} ${it.currency}</span>`;
+                div.appendChild(row);
+              });
+              container.appendChild(div);
+            });
+          }
+        }catch(e){
+          document.getElementById('menu-title').textContent = 'Failed to load menu';
+        }
+      }
+
+      // Read menu id from querystring ?menu=123
+      const params = new URLSearchParams(location.search);
+      const menuId = params.get('menu') || params.get('id') || 1;
+      // If fullscreen mode requested, request it
+      if(mode === 'fullscreen'){
+        document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(()=>{});
+        document.getElementById('root').classList.add('fullscreen');
+      }
+
+      loadMenu(menuId);
+
+      // Auto-refresh
+      if(autoRefresh > 0){
+        setInterval(()=> loadMenu(menuId), autoRefresh * 1000);
+      }
+
+      // Rotation of featured items
+      if(rotateSec > 0){
+        let idx = 0;
+        setInterval(async ()=>{
+          try{
+            const resp = await fetch(`/api/v1/menus/${menuId}/`);
+            if(!resp.ok) return;
+            const data = await resp.json();
+            const items = data.items || [];
+            const candidates = items.filter(i=>i.available);
+            if(candidates.length === 0) return;
+            idx = (idx + 1) % candidates.length;
+            const it = candidates[idx];
+            const featuredEl = document.getElementById('featured');
+            featuredEl.innerHTML = `<div class="featured centered"><div><strong>${it.name}</strong><div style="font-size:18px">${it.description||''}</div><div style="margin-top:6px">${it.price} ${it.currency}</div></div></div>`;
+          }catch(e){ }
+        }, rotateSec * 1000);
+      }
+    </script>
+  </body>
+</html>
