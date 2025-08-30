@@ -196,17 +196,15 @@ export const bulkUnassignAllApi = async (payload: Omit<UnassignPayload, 'display
 };
 
 // Media API functions
-export const uploadMedia = async (file: File, targetOrientation?: string): Promise<any> => {
+export const uploadMedia = async (file: File, targetOrientation?: string, description?: string): Promise<any> => {
   const formData = new FormData();
   formData.append('file', file);
-  if (targetOrientation) {
-    formData.append('target_orientation', targetOrientation);
-  }
-  
+  formData.append('name', file.name);
+  if (description) formData.append('description', description);
+  if (targetOrientation) formData.append('target_orientation', targetOrientation);
+
   const response = await api.post('/media/', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
 };
@@ -255,8 +253,17 @@ export const fetchMenuItems = async (menuId?: number): Promise<any[]> => {
   return response.data.results || response.data;
 };
 
-export const createMenuItem = async (itemData: any): Promise<any> => {
-  const response = await api.post('/menu-items/', itemData);
+export const createMenuItem = async (itemData: any, onUploadProgress?: (progress: number) => void): Promise<any> => {
+  const config: any = {};
+  
+  if (onUploadProgress) {
+    config.onUploadProgress = (progressEvent: any) => {
+      const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+      onUploadProgress(percentCompleted);
+    };
+  }
+  
+  const response = await api.post('/menu-items/', itemData, config);
   return response.data;
 };
 
@@ -267,6 +274,33 @@ export const updateMenuItem = async (itemId: number, itemData: any): Promise<any
 
 export const deleteMenuItem = async (itemId: number): Promise<void> => {
   await api.delete(`/menu-items/${itemId}/`);
+};
+
+// Menu Category API functions
+export const createMenuCategory = async (categoryData: any): Promise<any> => {
+  const response = await api.post('/menu-categories/', categoryData);
+  return response.data;
+};
+
+export const updateMenuCategory = async (categoryId: number, categoryData: any): Promise<any> => {
+  const response = await api.put(`/menu-categories/${categoryId}/`, categoryData);
+  return response.data;
+};
+
+export const deleteMenuCategory = async (categoryId: number): Promise<void> => {
+  await api.delete(`/menu-categories/${categoryId}/`);
+};
+
+// Menu Item patch function
+export const patchMenuItem = async (itemId: number, itemData: any): Promise<any> => {
+  const response = await api.patch(`/menu-items/${itemId}/`, itemData);
+  return response.data;
+};
+
+// Menu reorder function
+export const reorderMenu = async (menuId: number, reorderData: any): Promise<any> => {
+  const response = await api.post(`/menus/${menuId}/reorder/`, reorderData);
+  return response.data;
 };
 
 export default api;
