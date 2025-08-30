@@ -1,16 +1,20 @@
-# Stage 1: Build
-FROM node:18 AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+# Development Dockerfile
+FROM node:20-alpine
 
-# Stage 2: Serve
-FROM node:18-alpine
+# Set working directory
 WORKDIR /app
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/package*.json ./
-RUN npm install --production
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose port
 EXPOSE 5173
-CMD ["npx", "serve", "./dist", "-l", "5173"]
+
+# Start development server with hot reload
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

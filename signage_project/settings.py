@@ -149,9 +149,22 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DJANGO_DB_NAME', 'displayads'),
         'USER': os.environ.get('DJANGO_DB_USER', 'displayadsuser'),
-        'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', 'displayadspass'),
+        'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', 'displayadspass123'),
         'HOST': os.environ.get('DJANGO_DB_HOST', 'localhost'),
         'PORT': os.environ.get('DJANGO_DB_PORT', '5432'),
+    }
+}
+
+# Redis configuration for caching and advanced features
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
     }
 }
 

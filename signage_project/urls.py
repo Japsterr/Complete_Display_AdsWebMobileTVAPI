@@ -19,10 +19,12 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from api.views import tv_simulator_view
+from api.health import health_check
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('api.urls')),
+    path('api/health/', health_check, name='health-check'),
     path('tv-simulator.html', tv_simulator_view, name='tv-simulator-html'),
 ]
 

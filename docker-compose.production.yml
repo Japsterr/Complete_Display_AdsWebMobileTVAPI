@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: displayads_postgres_prod
+    environment:
+      POSTGRES_DB: displayads_prod
+      POSTGRES_USER: displayads_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_db_password_change_this}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    restart: unless-stopped
+    networks:
+      - displayads_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U displayads_user -d displayads_prod"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  redis:
+    image: redis:7-alpine
+    container_name: displayads_redis_prod
+    restart: unless-stopped
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - displayads_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: displayads_api_prod
+    env_file: 
+      - .env.production
+    volumes:
+      - ./media:/app/media
+      - ./static:/app/static
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - displayads_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+
+  nginx:
+    image: nginx:alpine
+    container_name: displayads_nginx_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./static:/var/www/static:ro
+      - ./media:/var/www/media:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - displayads_network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+
+  certbot:
+    image: certbot/certbot
+    container_name: displayads_certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    profiles:
+      - ssl
+    command: certonly --webroot -w /var/www/certbot --email ${CERTBOT_EMAIL} -d ${DOMAIN} -d www.${DOMAIN} --agree-tos --no-eff-email
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
+
+networks:
+  displayads_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
