@@ -67,7 +67,7 @@ from rest_framework import generics, viewsets, permissions, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes, action
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -399,9 +399,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.account_type == 'business' and hasattr(user, 'owned_business'):
-            campaigns = Campaign.objects.filter(business=user.owned_business)
+            campaigns = Campaign.objects.filter(business=user.owned_business).select_related('menu')
         else:
-            campaigns = Campaign.objects.filter(personal_user=user)
+            campaigns = Campaign.objects.filter(personal_user=user).select_related('menu')
         
         # Update status for all campaigns before returning
         for campaign in campaigns:
@@ -422,6 +422,73 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         campaign = serializer.save()
         # Status will be updated by the serializer's update method
+    
+    @action(detail=True, methods=['get'])
+    def menu_preview(self, request, pk=None):
+        """Generate preview URL for menu campaigns"""
+        campaign = self.get_object()
+        
+        if campaign.campaign_type != 'menu' or not campaign.menu:
+            return Response({'error': 'Not a menu campaign'}, status=400)
+        
+        # Generate preview URL with campaign settings
+        preview_url = f"/tv-menu-enhanced.html?menu={campaign.menu.menu_id}"
+        preview_url += f"&layout={campaign.menu_layout}"
+        preview_url += f"&refresh={campaign.auto_refresh_seconds}"
+        preview_url += f"&rotate={campaign.featured_rotation_seconds}"
+        preview_url += "&fullscreen=true"
+        
+        return Response({
+            'campaign_id': campaign.campaign_id,
+            'menu_id': campaign.menu.menu_id,
+            'preview_url': preview_url,
+            'layout': campaign.menu_layout,
+            'auto_refresh': campaign.auto_refresh_seconds,
+            'featured_rotation': campaign.featured_rotation_seconds
+        })
+    
+    @action(detail=True, methods=['post'])
+    def deploy_to_displays(self, request, pk=None):
+        """Deploy menu campaign to selected displays"""
+        campaign = self.get_object()
+        display_ids = request.data.get('display_ids', [])
+        
+        if campaign.campaign_type != 'menu':
+            return Response({'error': 'Only menu campaigns can be deployed'}, status=400)
+        
+        try:
+            from .models import Display, CampaignDisplay
+            
+            deployed_count = 0
+            for display_id in display_ids:
+                try:
+                    display = Display.objects.get(display_id=display_id)
+                    
+                    # Create or update campaign display assignment
+                    campaign_display, created = CampaignDisplay.objects.get_or_create(
+                        campaign=campaign,
+                        display=display,
+                        defaults={
+                            'start_date': timezone.now(),
+                            'end_date': campaign.end_date
+                        }
+                    )
+                    
+                    if created:
+                        deployed_count += 1
+                
+                except Display.DoesNotExist:
+                    continue
+            
+            return Response({
+                'campaign_id': campaign.campaign_id,
+                'deployed_to': deployed_count,
+                'total_requested': len(display_ids),
+                'status': 'deployed' if deployed_count > 0 else 'failed'
+            })
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
 
 class MediaViewSet(viewsets.ModelViewSet):
     serializer_class = MediaSerializer

@@ -215,12 +215,24 @@ class Campaign(models.Model):
         ('expired', 'Expired'),
     ]
     
+    TYPE_CHOICES = [
+        ('media', 'Media Campaign'),
+        ('menu', 'Menu Campaign'),
+        ('hybrid', 'Hybrid Campaign'),  # Mix of media and menus
+    ]
+    
     campaign_id = models.AutoField(primary_key=True)
     personal_user = models.ForeignKey('User', null=True, blank=True, on_delete=models.CASCADE, related_name='personal_campaigns')
     business = models.ForeignKey('Business', null=True, blank=True, on_delete=models.CASCADE, related_name='business_campaigns')
     created_by = models.ForeignKey('User', on_delete=models.CASCADE, related_name='created_campaigns')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    campaign_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='media')
+    menu = models.ForeignKey('Menu', null=True, blank=True, on_delete=models.CASCADE, related_name='campaigns', help_text='Menu to display for menu campaigns')
+    menu_layout = models.CharField(max_length=10, choices=[('single', 'Single Screen'), ('dual', 'Dual Screen'), ('triple', 'Triple Screen')], default='dual', help_text='Layout for menu display')
+    auto_refresh_seconds = models.PositiveIntegerField(default=10, help_text='Auto-refresh interval for menu content')
+    featured_rotation_seconds = models.PositiveIntegerField(default=8, help_text='Featured item rotation interval')
+    promotional_metadata = models.JSONField(default=dict, blank=True, help_text='Metadata for auto-generated promotional campaigns')
     screen_orientation = models.CharField(max_length=10, choices=[('portrait', 'Portrait'), ('landscape', 'Landscape')], default='portrait', help_text='Orientation for all media in this campaign')
     normalize_to_orientation = models.CharField(
         max_length=10,
@@ -243,6 +255,13 @@ class Campaign(models.Model):
                     (models.Q(personal_user__isnull=True, business__isnull=False))
                 ),
                 name='campaign_owner_xor'
+            ),
+            models.CheckConstraint(
+                check=(
+                    (models.Q(campaign_type='menu', menu__isnull=False)) |
+                    (models.Q(campaign_type__in=['media', 'hybrid']))
+                ),
+                name='menu_campaign_requires_menu'
             )
         ]
 
@@ -517,6 +536,31 @@ class RefreshToken(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.token[:10]}..."
 
+class ApiKey(models.Model):
+    """API keys for external system integration (like POS systems)"""
+    name = models.CharField(max_length=255, help_text="Descriptive name for this API key")
+    key = models.CharField(max_length=255, unique=True, help_text="The actual API key")
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='api_keys')
+    
+    # Permissions and restrictions
+    can_update_menus = models.BooleanField(default=True)
+    can_read_analytics = models.BooleanField(default=False)
+    allowed_ips = models.TextField(null=True, blank=True, help_text="Comma-separated list of allowed IP addresses")
+    
+    # Tracking
+    last_used = models.DateTimeField(null=True, blank=True)
+    usage_count = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'ApiKeys'
+    
+    def __str__(self):
+        return f"{self.business.name} - {self.name}"
+
 # Analytics and Tracking Models
 class DeviceHeartbeat(models.Model):
     """Track device online status and health"""
@@ -576,3 +620,246 @@ class CampaignSession(models.Model):
             models.Index(fields=['display', '-started_at']),
             models.Index(fields=['campaign', '-started_at']),
         ]
+
+# --- Menu System Models ---
+class Menu(models.Model):
+    """Digital menu for restaurants/businesses"""
+    menu_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Owner can be either business or personal user
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='menus', null=True, blank=True)
+    personal_user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='menus', null=True, blank=True)
+    
+    class Meta:
+        db_table = 'Menus'
+    
+    def __str__(self):
+        return self.name
+
+class MenuCategory(models.Model):
+    """Categories within a menu (e.g., Appetizers, Mains)"""
+    category_id = models.AutoField(primary_key=True)
+    menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name='categories')
+    name = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=0)
+    
+    class Meta:
+        db_table = 'MenuCategories'
+        ordering = ['order', 'name']
+    
+    def __str__(self):
+        return f"{self.menu.name} - {self.name}"
+
+class MenuItem(models.Model):
+    """Individual items within menu categories"""
+    item_id = models.AutoField(primary_key=True)
+    menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name='items')
+    category = models.ForeignKey(MenuCategory, on_delete=models.SET_NULL, related_name='items', null=True, blank=True)
+    
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    currency = models.CharField(max_length=10, default='ZAR')
+    available = models.BooleanField(default=True)
+    image = models.FileField(upload_to='menus/', null=True, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    
+    # POS Integration fields
+    pos_item_id = models.CharField(max_length=100, null=True, blank=True, help_text="External POS system item ID")
+    last_pos_sync = models.DateTimeField(null=True, blank=True)
+    promotion_flag = models.BooleanField(default=False, help_text="Item is currently on promotion")
+    special_offer = models.CharField(max_length=500, null=True, blank=True, help_text="Promotional text from POS")
+    
+    class Meta:
+        db_table = 'MenuItems'
+        ordering = ['order', 'name']
+    
+    def __str__(self):
+        return f"{self.menu.name} - {self.name}"
+
+# --- Enhanced POS Integration Models - Stage 4 ---
+class POSIntegration(models.Model):
+    """Enhanced POS system integration configuration with advanced features"""
+    POS_TYPES = [
+        ('square', 'Square'),
+        ('toast', 'Toast'),
+        ('lightspeed', 'Lightspeed'),
+        ('shopify', 'Shopify POS'),
+        ('generic', 'Generic API'),
+    ]
+    
+    SYNC_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('error', 'Error'),
+        ('disabled', 'Disabled'),
+        ('pending', 'Pending Setup'),
+    ]
+    
+    SYNC_PRIORITY_CHOICES = [
+        ('high', 'High Priority (5 min)'),
+        ('medium', 'Medium Priority (15 min)'),
+        ('low', 'Low Priority (1 hour)'),
+    ]
+    
+    CONFLICT_RESOLUTION_CHOICES = [
+        ('pos_wins', 'POS System Wins'),
+        ('menu_wins', 'Menu System Wins'),
+        ('latest_wins', 'Latest Update Wins'),
+        ('manual', 'Manual Resolution'),
+    ]
+    
+    # Basic configuration
+    name = models.CharField(max_length=255, help_text="Human-readable name for this integration")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pos_integrations')
+    pos_system = models.CharField(max_length=50, choices=POS_TYPES)
+    api_endpoint = models.URLField(null=True, blank=True)
+    
+    # Authentication & Configuration
+    api_key = models.CharField(max_length=500, null=True, blank=True)
+    access_token = models.CharField(max_length=500, null=True, blank=True)
+    refresh_token = models.CharField(max_length=500, null=True, blank=True)
+    auth_config = models.JSONField(default=dict, help_text="Additional auth configuration")
+    
+    # Synchronization settings
+    is_active = models.BooleanField(default=True)
+    sync_priority = models.CharField(max_length=10, choices=SYNC_PRIORITY_CHOICES, default='medium')
+    conflict_resolution_strategy = models.CharField(max_length=20, choices=CONFLICT_RESOLUTION_CHOICES, default='latest_wins')
+    bidirectional_sync = models.BooleanField(default=True, help_text="Enable two-way synchronization")
+    
+    # Webhook configuration
+    webhook_id = models.CharField(max_length=255, null=True, blank=True)
+    webhook_secret = models.CharField(max_length=500, null=True, blank=True)
+    webhook_events = models.JSONField(default=list, help_text="List of subscribed webhook events")
+    
+    # Status tracking
+    last_sync = models.DateTimeField(null=True, blank=True)
+    last_successful_sync = models.DateTimeField(null=True, blank=True)
+    sync_status = models.CharField(max_length=20, choices=SYNC_STATUS_CHOICES, default='pending')
+    error_message = models.TextField(null=True, blank=True)
+    
+    # Statistics
+    total_syncs = models.PositiveIntegerField(default=0)
+    successful_syncs = models.PositiveIntegerField(default=0)
+    failed_syncs = models.PositiveIntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'pos_integrations'
+        indexes = [
+            models.Index(fields=['created_by', 'is_active']),
+            models.Index(fields=['sync_priority', 'is_active']),
+        ]
+    
+    @property
+    def success_rate(self):
+        """Calculate sync success rate"""
+        if self.total_syncs == 0:
+            return 0
+        return round((self.successful_syncs / self.total_syncs) * 100, 2)
+    
+    def __str__(self):
+        return f"{self.name} ({self.pos_system})"
+
+
+class MenuItemPOSSync(models.Model):
+    """Enhanced POS synchronization tracking for menu items"""
+    menu_item = models.OneToOneField(MenuItem, on_delete=models.CASCADE, related_name='pos_sync')
+    pos_integration = models.ForeignKey(POSIntegration, on_delete=models.CASCADE, related_name='item_syncs')
+    
+    # POS identifiers
+    pos_item_id = models.CharField(max_length=100)
+    pos_category_id = models.CharField(max_length=100, null=True, blank=True)
+    
+    # Sync timestamps
+    last_pos_update = models.DateTimeField(null=True, blank=True)
+    last_menu_update = models.DateTimeField(null=True, blank=True)
+    last_successful_sync = models.DateTimeField(null=True, blank=True)
+    
+    # Conflict tracking
+    has_conflicts = models.BooleanField(default=False)
+    conflict_details = models.JSONField(default=dict, help_text="Current sync conflicts")
+    conflict_resolution_history = models.JSONField(default=list, help_text="History of conflict resolutions")
+    
+    # POS data cache
+    pos_name = models.CharField(max_length=255, null=True, blank=True)
+    pos_description = models.TextField(null=True, blank=True)
+    pos_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    pos_available = models.BooleanField(default=True)
+    pos_category_name = models.CharField(max_length=255, null=True, blank=True)
+    pos_metadata = models.JSONField(default=dict, help_text="Additional POS system data")
+    
+    # Sync statistics
+    total_syncs = models.PositiveIntegerField(default=0)
+    successful_syncs = models.PositiveIntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'menu_item_pos_sync'
+        unique_together = ['pos_integration', 'pos_item_id']
+        indexes = [
+            models.Index(fields=['pos_integration', 'has_conflicts']),
+            models.Index(fields=['last_successful_sync']),
+        ]
+    
+    def __str__(self):
+        return f"{self.menu_item.name} - POS: {self.pos_item_id}"
+
+
+class POSUpdateLog(models.Model):
+    """Enhanced audit log for POS operations"""
+    OPERATION_CHOICES = [
+        ('webhook_received', 'Webhook Received'),
+        ('manual_sync', 'Manual Sync'),
+        ('scheduled_sync', 'Scheduled Sync'),
+        ('bidirectional_sync', 'Bidirectional Sync'),
+        ('conflict_resolution', 'Conflict Resolution'),
+        ('connection_test', 'Connection Test'),
+        ('webhook_setup', 'Webhook Setup'),
+        ('high_priority_sync', 'High Priority Sync'),
+        ('medium_priority_sync', 'Medium Priority Sync'),
+        ('low_priority_sync', 'Low Priority Sync'),
+        ('immediate_sync', 'Immediate Sync'),
+        ('force_resync', 'Force Resync'),
+    ]
+    
+    pos_integration = models.ForeignKey(POSIntegration, on_delete=models.CASCADE, related_name='pos_update_logs')
+    operation = models.CharField(max_length=30, choices=OPERATION_CHOICES)
+    success = models.BooleanField(default=True)
+    
+    # Operation details
+    details = models.TextField(null=True, blank=True, help_text="JSON serialized operation details")
+    error_message = models.TextField(null=True, blank=True)
+    
+    # Performance metrics
+    duration_ms = models.PositiveIntegerField(null=True, blank=True, help_text="Operation duration in milliseconds")
+    items_processed = models.PositiveIntegerField(default=0)
+    items_updated = models.PositiveIntegerField(default=0)
+    items_failed = models.PositiveIntegerField(default=0)
+    conflicts_detected = models.PositiveIntegerField(default=0)
+    conflicts_resolved = models.PositiveIntegerField(default=0)
+    
+    # Request/response data
+    request_data = models.JSONField(default=dict, null=True, blank=True)
+    response_data = models.JSONField(default=dict, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'pos_update_logs'
+        indexes = [
+            models.Index(fields=['pos_integration', '-created_at']),
+            models.Index(fields=['operation', 'success', '-created_at']),
+            models.Index(fields=['success', '-created_at']),
+        ]
+    
+    def __str__(self):
+        status = "✓" if self.success else "✗"
+        return f"{status} {self.pos_integration.name} - {self.operation} ({self.created_at})"

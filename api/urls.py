@@ -15,6 +15,15 @@ from .views import (
 from .stripe_views import CreateCheckoutSessionView, get_stripe_config, stripe_webhook
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
+# Menu System Imports
+from .menu_views import (
+    MenuViewSet, MenuCategoryViewSet, MenuItemViewSet, ApiKeyViewSet, POSIntegrationViewSet as MenuPOSIntegrationViewSet,
+    pos_update_menu_items, pos_webhook_handler, pos_sync_logs, menu_analytics
+)
+from .promotional_views import PromotionalTemplateViewSet
+# Stage 4 Advanced POS Synchronization Imports
+from .pos_views import POSIntegrationViewSet, POSUpdateLogViewSet, POSWebhookView
+
 router = DefaultRouter()
 router.register(r'campaigns', CampaignViewSet)
 router.register(r'media', MediaViewSet)
@@ -28,6 +37,17 @@ router.register(r'audit-logs', AuditLogViewSet)
 router.register(r'display-groups', DisplayGroupViewSet)
 router.register(r'tags', TagViewSet)
 router.register(r'media-approvals', MediaApprovalViewSet)
+
+# Menu System Routes
+router.register(r'menus', MenuViewSet, basename='menu')
+router.register(r'menu-categories', MenuCategoryViewSet, basename='menucategory')
+router.register(r'menu-items', MenuItemViewSet, basename='menuitem')
+router.register(r'api-keys', ApiKeyViewSet, basename='apikey')
+router.register(r'pos-integrations-menu', MenuPOSIntegrationViewSet, basename='posintegration')
+router.register(r'promotional-templates', PromotionalTemplateViewSet, basename='promotionaltemplate')
+# Stage 4 Advanced POS Synchronization Routes
+router.register(r'pos-integrations', POSIntegrationViewSet, basename='pos-integration')
+router.register(r'pos-logs', POSUpdateLogViewSet, basename='pos-logs')
 
 urlpatterns = [
     # Health check for mobile app
@@ -75,6 +95,18 @@ urlpatterns = [
     path('payments/create-checkout-session/', CreateCheckoutSessionView.as_view(), name='create-checkout-session'),
     path('payments/stripe-config/', get_stripe_config, name='stripe-config'),
     path('payments/stripe-webhook/', stripe_webhook, name='stripe-webhook'),
+    
+    # Menu System & POS Integration Endpoints
+    path('menus/pos-update/', pos_update_menu_items, name='pos-update-menu-items'),
+    path('pos/webhook/', pos_webhook_handler, name='pos-webhook'),
+    path('pos/sync-logs/', pos_sync_logs, name='pos-sync-logs'),
+    path('analytics/menu-performance/', menu_analytics, name='menu-analytics'),
+    
+    # Stage 4 Advanced POS Synchronization Endpoints
+    path('pos-webhook/<int:pos_integration_id>/', POSWebhookView.as_view(), name='pos-webhook-advanced'),
+    
+    # Stage 6 Advanced Features
+    path('advanced/', include('api.advanced_features_urls')),
     
     path('', include(router.urls)),
 ]

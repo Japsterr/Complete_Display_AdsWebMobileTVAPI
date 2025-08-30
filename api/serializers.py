@@ -182,15 +182,40 @@ class CampaignSerializer(serializers.ModelSerializer):
     media_count = serializers.ReadOnlyField()
     total_duration = serializers.ReadOnlyField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    campaign_type_display = serializers.CharField(source='get_campaign_type_display', read_only=True)
+    menu_name = serializers.CharField(source='menu.name', read_only=True)
+    preview_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Campaign
         fields = [
-            'campaign_id', 'name', 'description', 'screen_orientation', 'normalize_to_orientation', 'status', 'status_display',
+            'campaign_id', 'name', 'description', 'campaign_type', 'campaign_type_display',
+            'menu', 'menu_name', 'menu_layout', 'auto_refresh_seconds', 'featured_rotation_seconds',
+            'screen_orientation', 'normalize_to_orientation', 'status', 'status_display',
             'start_date', 'end_date', 'created_at', 'updated_at',
-            'media_count', 'total_duration'
+            'media_count', 'total_duration', 'preview_url'
         ]
         read_only_fields = ['campaign_id', 'created_at', 'updated_at', 'media_count', 'total_duration']
+    
+    def get_preview_url(self, obj):
+        """Generate preview URL for menu campaigns"""
+        if obj.campaign_type == 'menu' and obj.menu:
+            preview_url = f"/tv-menu-enhanced.html?menu={obj.menu.menu_id}"
+            preview_url += f"&layout={obj.menu_layout}"
+            preview_url += f"&refresh={obj.auto_refresh_seconds}"
+            preview_url += f"&rotate={obj.featured_rotation_seconds}"
+            return preview_url
+        return None
+    
+    def validate(self, data):
+        """Validate menu campaign requirements"""
+        campaign_type = data.get('campaign_type', 'media')
+        menu = data.get('menu')
+        
+        if campaign_type == 'menu' and not menu:
+            raise serializers.ValidationError("Menu campaigns must have a menu selected.")
+        
+        return data
         
     def update(self, instance, validated_data):
         # Update the instance
@@ -309,3 +334,106 @@ class StripePaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = StripePayment
         fields = '__all__'
+
+# --- Menu System Serializers ---
+from .models import Menu, MenuCategory, MenuItem, POSIntegration, MenuItemPOSSync, POSUpdateLog, ApiKey
+
+class MenuCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MenuCategory
+        fields = ['category_id', 'name', 'order']
+
+class MenuItemSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    pos_sync_status = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = MenuItem
+        fields = [
+            'item_id', 'name', 'description', 'price', 'currency', 'available',
+            'image', 'order', 'category', 'category_name', 'pos_item_id', 
+            'last_pos_sync', 'promotion_flag', 'special_offer', 'pos_sync_status'
+        ]
+    
+    def get_pos_sync_status(self, obj):
+        try:
+            sync = obj.pos_sync
+            return {
+                'synced': True,
+                'last_sync': sync.last_pos_update,
+                'conflicts': bool(sync.sync_conflicts)
+            }
+        except:
+            return {'synced': False, 'last_sync': None, 'conflicts': False}
+
+class MenuSerializer(serializers.ModelSerializer):
+    categories = MenuCategorySerializer(many=True, read_only=True)
+    items = MenuItemSerializer(many=True, read_only=True)
+    items_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Menu
+        fields = ['menu_id', 'name', 'active', 'created_at', 'updated_at', 'categories', 'items', 'items_count']
+    
+    def get_items_count(self, obj):
+        return obj.items.count()
+
+class POSUpdateRequestSerializer(serializers.Serializer):
+    """Serializer for POS update requests"""
+    item_id = serializers.IntegerField()
+    name = serializers.CharField(max_length=255, required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    available = serializers.BooleanField(required=False)
+    promotion_flag = serializers.BooleanField(required=False)
+    special_offer = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    pos_item_id = serializers.CharField(max_length=100, required=False)
+
+class POSBulkUpdateSerializer(serializers.Serializer):
+    """Serializer for bulk POS updates"""
+    updates = POSUpdateRequestSerializer(many=True)
+    source_system = serializers.CharField(max_length=50, required=False, default='unknown')
+    sync_timestamp = serializers.DateTimeField(required=False)
+
+class POSIntegrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = POSIntegration
+        fields = [
+            'id', 'pos_system_type', 'api_endpoint', 'last_sync', 'sync_status',
+            'error_message', 'sync_interval_minutes', 'auto_sync_enabled',
+            'webhook_url', 'created_at', 'updated_at'
+        ]
+
+class MenuItemPOSSyncSerializer(serializers.ModelSerializer):
+    menu_item_name = serializers.CharField(source='menu_item.name', read_only=True)
+    
+    class Meta:
+        model = MenuItemPOSSync
+        fields = [
+            'id', 'menu_item', 'menu_item_name', 'pos_item_id', 'last_pos_update',
+            'sync_conflicts', 'pos_name', 'pos_description', 'pos_price',
+            'pos_available', 'pos_promotion_data'
+        ]
+
+class POSUpdateLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = POSUpdateLog
+        fields = [
+            'id', 'update_type', 'items_updated', 'items_failed',
+            'update_data', 'error_details', 'timestamp', 'duration_seconds'
+        ]
+
+class ApiKeySerializer(serializers.ModelSerializer):
+    key = serializers.CharField(write_only=True)  # Don't expose keys in responses
+    
+    class Meta:
+        model = ApiKey
+        fields = [
+            'id', 'name', 'key', 'can_update_menus', 'can_read_analytics',
+            'allowed_ips', 'last_used', 'usage_count', 'is_active',
+            'created_at', 'expires_at'
+        ]
+        extra_kwargs = {
+            'usage_count': {'read_only': True},
+            'last_used': {'read_only': True},
+        }

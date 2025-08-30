@@ -1,0 +1,516 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Digital Menu Board</title>
+    <style>
+      html,body { height:100%; margin:0; overflow:hidden }
+      body { 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        background: linear-gradient(135deg, #1e3c72, #2a5298); 
+        color:#fff; margin:0; padding:0 
+      }
+      
+      /* Multi-screen layout support */
+      .single-screen { display:flex; flex-direction:column; height:100vh; padding:20px }
+      .dual-screen { display:grid; grid-template-columns: 1fr 1fr; height:100vh; gap:20px; padding:20px }
+      .triple-screen { display:grid; grid-template-columns: 1fr 1fr 1fr; height:100vh; gap:15px; padding:15px }
+      
+      /* Header with branding and promotions */
+      .header { 
+        display:flex; justify-content:space-between; align-items:center; 
+        margin-bottom:20px; background:rgba(255,255,255,0.1); 
+        border-radius:12px; padding:15px; backdrop-filter:blur(10px) 
+      }
+      .menu-title { 
+        font-size:48px; font-weight:700; margin:0; 
+        background: linear-gradient(45deg, #FFD700, #FFA500);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text; text-shadow: 2px 2px 4px rgba(0,0,0,0.3)
+      }
+      .pos-status { 
+        padding:8px 16px; border-radius:20px; font-size:14px; font-weight:600;
+        display:flex; align-items:center; gap:8px
+      }
+      .pos-connected { background:#4CAF50; color:white }
+      .pos-disconnected { background:#f44336; color:white }
+      .pos-syncing { background:#FF9800; color:white }
+      
+      /* Promotional banner */
+      .promo-banner { 
+        background: linear-gradient(90deg, #ff6b6b, #ffa726, #66bb6a);
+        color:#fff; padding:12px; margin-bottom:20px; border-radius:8px;
+        text-align:center; font-size:20px; font-weight:700;
+        animation: gradientShift 3s ease-in-out infinite;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2)
+      }
+      @keyframes gradientShift {
+        0%, 100% { background: linear-gradient(90deg, #ff6b6b, #ffa726, #66bb6a) }
+        50% { background: linear-gradient(90deg, #66bb6a, #ff6b6b, #ffa726) }
+      }
+      
+      /* Featured item rotation */
+      .featured-section { 
+        margin-bottom:20px; background:rgba(255,255,255,0.05); 
+        border-radius:12px; padding:20px; border:2px solid #FFD700 
+      }
+      .featured-item { 
+        display:flex; align-items:center; gap:20px; padding:15px;
+        background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.2));
+        border-radius:10px; animation: pulse 2s ease-in-out infinite
+      }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1 }
+        50% { transform: scale(1.02); opacity: 0.95 }
+      }
+      .featured-badge { 
+        background:#FFD700; color:#000; padding:4px 12px; border-radius:15px;
+        font-size:12px; font-weight:700; text-transform:uppercase
+      }
+      
+      /* Category sections */
+      .categories-container { 
+        flex:1; display:flex; gap:20px; overflow:hidden 
+      }
+      .category { 
+        flex:1; background:rgba(255,255,255,0.08); border-radius:12px; 
+        padding:0; backdrop-filter:blur(5px); border:1px solid rgba(255,255,255,0.1);
+        display:flex; flex-direction:column; min-height:0
+      }
+      .category-header { 
+        background: linear-gradient(135deg, #667eea, #764ba2); 
+        color:#fff; padding:15px; margin:0; border-radius:12px 12px 0 0;
+        font-size:24px; font-weight:700; text-align:center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2)
+      }
+      .category-items { 
+        flex:1; overflow-y:auto; padding:10px 
+      }
+      
+      /* Menu items */
+      .menu-item { 
+        padding:12px 15px; margin-bottom:8px;
+        border-radius:8px; display:flex; justify-content:space-between; 
+        align-items:center; transition:all 0.3s ease;
+        background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1)
+      }
+      .menu-item:hover { 
+        background:rgba(255,255,255,0.1); transform:translateX(5px) 
+      }
+      .menu-item.promotion { 
+        background: linear-gradient(135deg, rgba(255,193,7,0.2), rgba(255,152,0,0.2));
+        border:2px solid #FFC107; animation: promotionGlow 2s ease-in-out infinite
+      }
+      @keyframes promotionGlow {
+        0%, 100% { box-shadow: 0 0 5px rgba(255,193,7,0.5) }
+        50% { box-shadow: 0 0 20px rgba(255,193,7,0.8) }
+      }
+      
+      .item-details { flex:1 }
+      .item-name { 
+        font-weight:700; font-size:18px; margin-bottom:4px;
+        display:flex; align-items:center; gap:8px
+      }
+      .item-description { 
+        font-size:14px; color:#ccc; line-height:1.3 
+      }
+      .item-price { 
+        color:#4CAF50; font-weight:700; font-size:20px;
+        padding:8px 12px; background:rgba(76,175,80,0.1); border-radius:6px
+      }
+      .item-special-offer { 
+        background:#FF5722; color:#fff; padding:4px 8px; border-radius:4px;
+        font-size:12px; font-weight:600; margin-left:8px
+      }
+      .unavailable { 
+        opacity:0.5; text-decoration:line-through 
+      }
+      
+      /* Screen layout controls */
+      .layout-controls { 
+        position:fixed; top:10px; right:10px; z-index:1000;
+        display:flex; gap:5px 
+      }
+      .layout-btn { 
+        padding:8px 12px; background:rgba(0,0,0,0.7); color:#fff;
+        border:none; border-radius:4px; cursor:pointer; font-size:12px
+      }
+      .layout-btn.active { background:#4CAF50 }
+      
+      /* Loading states */
+      .loading { 
+        display:flex; align-items:center; justify-content:center;
+        font-size:18px; padding:40px 
+      }
+      .spinner { 
+        border:3px solid rgba(255,255,255,0.3); border-top:3px solid #fff;
+        border-radius:50%; width:30px; height:30px; animation:spin 1s linear infinite;
+        margin-right:15px
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg) }
+        100% { transform: rotate(360deg) }
+      }
+      
+      /* Responsive design */
+      @media (max-width: 1200px) {
+        .menu-title { font-size:36px }
+        .category-header { font-size:20px }
+        .item-name { font-size:16px }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Layout controls -->
+    <div class="layout-controls">
+      <button class="layout-btn" onclick="setLayout('single')">1 Screen</button>
+      <button class="layout-btn active" onclick="setLayout('dual')">2 Screen</button>
+      <button class="layout-btn" onclick="setLayout('triple')">3 Screen</button>
+    </div>
+
+    <div id="root" class="dual-screen">
+      <!-- Header with title and POS status -->
+      <div class="header" style="grid-column: 1 / -1">
+        <div class="menu-title" id="menu-title">Digital Menu Board</div>
+        <div class="pos-status pos-connected" id="pos-status">
+          <div class="spinner" style="display:none" id="sync-spinner"></div>
+          <span id="status-text">🟢 POS Connected</span>
+        </div>
+      </div>
+
+      <!-- Promotional banner -->
+      <div class="promo-banner" id="promo-banner" style="grid-column: 1 / -1; display:none">
+        <div id="promo-text">🎉 Special Offer: Buy 2 Get 1 Free on Selected Items!</div>
+      </div>
+
+      <!-- Featured item section -->
+      <div class="featured-section" id="featured-section" style="grid-column: 1 / -1">
+        <div class="featured-item" id="featured-item">
+          <div class="featured-badge">Featured</div>
+          <div class="item-details">
+            <div class="item-name" id="featured-name">Loading...</div>
+            <div class="item-description" id="featured-description"></div>
+          </div>
+          <div class="item-price" id="featured-price">--</div>
+        </div>
+      </div>
+
+      <!-- Categories container -->
+      <div class="categories-container" id="categories-container" style="grid-column: 1 / -1">
+        <div class="loading">
+          <div class="spinner"></div>
+          Loading menu...
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Configuration
+      const config = {
+        menuId: new URLSearchParams(location.search).get('menu') || 1,
+        autoRefresh: parseInt(new URLSearchParams(location.search).get('refresh') || '10', 10),
+        featuredRotate: parseInt(new URLSearchParams(location.search).get('rotate') || '8', 10),
+        layout: new URLSearchParams(location.search).get('layout') || 'dual',
+        posSync: true,
+        promoRotate: 15 // seconds between promotional banners
+      };
+
+      // State management
+      let currentMenu = null;
+      let featuredIndex = 0;
+      let promoIndex = 0;
+      let lastPosSync = null;
+      let connectionRetries = 0;
+
+      // Initialize layout
+      setLayout(config.layout);
+
+      // Enhanced menu loading with POS sync status
+      async function loadMenuWithPosSync() {
+        updatePosStatus('syncing');
+        
+        try {
+          const response = await fetch(`/api/v1/menus/${config.menuId}/`);
+          
+          if (!response.ok) {
+            throw new Error(`Failed to load menu: ${response.status}`);
+          }
+          
+          const menuData = await response.json();
+          currentMenu = menuData;
+          connectionRetries = 0;
+          
+          // Update last sync time
+          lastPosSync = new Date();
+          
+          // Render menu
+          renderMenu(menuData);
+          updatePosStatus('connected');
+          
+          // Load promotional data
+          loadPromotionalBanners();
+          
+        } catch (error) {
+          console.error('Menu loading error:', error);
+          connectionRetries++;
+          updatePosStatus('disconnected');
+          
+          // Show error state
+          document.getElementById('categories-container').innerHTML = `
+            <div class="loading">
+              <div style="color:#f44336">❌ Failed to load menu</div>
+              <div style="font-size:14px; margin-top:10px">Retrying in ${Math.min(connectionRetries * 2, 30)} seconds...</div>
+            </div>
+          `;
+          
+          // Retry with exponential backoff
+          setTimeout(() => {
+            if (connectionRetries < 10) {
+              loadMenuWithPosSync();
+            }
+          }, Math.min(connectionRetries * 2000, 30000));
+        }
+      }
+
+      // Enhanced menu rendering
+      function renderMenu(menuData) {
+        document.getElementById('menu-title').textContent = menuData.name || 'Digital Menu Board';
+        
+        const container = document.getElementById('categories-container');
+        const categories = menuData.categories || [];
+        const items = menuData.items || [];
+        
+        if (categories.length === 0) {
+          // Single category layout
+          container.innerHTML = `
+            <div class="category">
+              <div class="category-header">Menu Items</div>
+              <div class="category-items" id="category-0"></div>
+            </div>
+          `;
+          renderCategoryItems('category-0', items);
+        } else {
+          // Multi-category layout
+          container.innerHTML = categories.map(cat => `
+            <div class="category">
+              <div class="category-header">${cat.name}</div>
+              <div class="category-items" id="category-${cat.category_id}"></div>
+            </div>
+          `).join('');
+          
+          // Render items for each category
+          categories.forEach(cat => {
+            const categoryItems = items.filter(item => item.category === cat.category_id);
+            renderCategoryItems(`category-${cat.category_id}`, categoryItems);
+          });
+        }
+        
+        // Initialize featured rotation
+        initializeFeaturedRotation(items);
+      }
+
+      // Render category items with enhanced features
+      function renderCategoryItems(containerId, items) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        container.innerHTML = items.map(item => {
+          const isPromotion = item.promotion_flag || item.special_offer;
+          const isAvailable = item.available !== false;
+          
+          return `
+            <div class="menu-item ${isPromotion ? 'promotion' : ''} ${!isAvailable ? 'unavailable' : ''}" 
+                 data-pos-id="${item.pos_item_id || ''}" 
+                 data-last-sync="${item.last_pos_sync || ''}">
+              <div class="item-details">
+                <div class="item-name">
+                  ${item.name}
+                  ${isPromotion ? `<span class="item-special-offer">${item.special_offer || 'Special!'}</span>` : ''}
+                  ${!isAvailable ? '<span style="color:#f44336; font-size:12px;">UNAVAILABLE</span>' : ''}
+                </div>
+                ${item.description ? `<div class="item-description">${item.description}</div>` : ''}
+              </div>
+              <div class="item-price">${item.currency || 'R'}${item.price}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Featured item rotation
+      function initializeFeaturedRotation(items) {
+        const availableItems = items.filter(item => item.available !== false);
+        if (availableItems.length === 0) return;
+        
+        // Show first featured item
+        showFeaturedItem(availableItems[0]);
+        
+        // Start rotation
+        if (config.featuredRotate > 0 && availableItems.length > 1) {
+          setInterval(() => {
+            featuredIndex = (featuredIndex + 1) % availableItems.length;
+            showFeaturedItem(availableItems[featuredIndex]);
+          }, config.featuredRotate * 1000);
+        }
+      }
+
+      // Display featured item
+      function showFeaturedItem(item) {
+        document.getElementById('featured-name').textContent = item.name;
+        document.getElementById('featured-description').textContent = item.description || '';
+        document.getElementById('featured-price').textContent = `${item.currency || 'R'}${item.price}`;
+        
+        // Add special promotion styling if applicable
+        const featuredItem = document.getElementById('featured-item');
+        if (item.promotion_flag || item.special_offer) {
+          featuredItem.style.background = 'linear-gradient(135deg, rgba(255,193,7,0.3), rgba(255,152,0,0.3))';
+          featuredItem.style.border = '2px solid #FFC107';
+        } else {
+          featuredItem.style.background = 'linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.2))';
+          featuredItem.style.border = '2px solid #FFD700';
+        }
+      }
+
+      // Load and display promotional banners
+      async function loadPromotionalBanners() {
+        try {
+          // Check for active promotions in current menu
+          if (!currentMenu || !currentMenu.items) return;
+          
+          const promotionalItems = currentMenu.items.filter(item => 
+            item.promotion_flag && item.special_offer && item.available !== false
+          );
+          
+          if (promotionalItems.length > 0) {
+            showPromotionalBanner(promotionalItems);
+          } else {
+            hidePromotionalBanner();
+          }
+        } catch (error) {
+          console.error('Error loading promotional banners:', error);
+        }
+      }
+
+      // Show promotional banner with rotation
+      function showPromotionalBanner(promotionalItems) {
+        const banner = document.getElementById('promo-banner');
+        const text = document.getElementById('promo-text');
+        
+        banner.style.display = 'block';
+        
+        // Show first promotion
+        text.textContent = `🎉 ${promotionalItems[0].special_offer} - ${promotionalItems[0].name}`;
+        
+        // Rotate promotions if multiple exist
+        if (promotionalItems.length > 1) {
+          setInterval(() => {
+            promoIndex = (promoIndex + 1) % promotionalItems.length;
+            text.textContent = `🎉 ${promotionalItems[promoIndex].special_offer} - ${promotionalItems[promoIndex].name}`;
+          }, config.promoRotate * 1000);
+        }
+      }
+
+      // Hide promotional banner
+      function hidePromotionalBanner() {
+        document.getElementById('promo-banner').style.display = 'none';
+      }
+
+      // Update POS connection status
+      function updatePosStatus(status) {
+        const statusEl = document.getElementById('pos-status');
+        const textEl = document.getElementById('status-text');
+        const spinnerEl = document.getElementById('sync-spinner');
+        
+        statusEl.className = `pos-status pos-${status}`;
+        
+        switch (status) {
+          case 'connected':
+            textEl.textContent = '🟢 POS Connected';
+            spinnerEl.style.display = 'none';
+            break;
+          case 'syncing':
+            textEl.textContent = '🟡 Syncing...';
+            spinnerEl.style.display = 'block';
+            break;
+          case 'disconnected':
+            textEl.textContent = '🔴 POS Disconnected';
+            spinnerEl.style.display = 'none';
+            break;
+        }
+      }
+
+      // Layout management
+      function setLayout(layout) {
+        const root = document.getElementById('root');
+        root.className = `${layout}-screen`;
+        
+        // Update active button
+        document.querySelectorAll('.layout-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        event?.target?.classList.add('active');
+        
+        // Store layout preference
+        config.layout = layout;
+      }
+
+      // Auto-refresh with enhanced error handling
+      function startAutoRefresh() {
+        if (config.autoRefresh > 0) {
+          setInterval(() => {
+            if (connectionRetries < 5) { // Only auto-refresh if not in error state
+              loadMenuWithPosSync();
+            }
+          }, config.autoRefresh * 1000);
+        }
+      }
+
+      // Real-time POS webhook listener (WebSocket simulation)
+      function initializePosWebhookListener() {
+        // In a real implementation, this would connect to a WebSocket
+        // For now, we'll use enhanced polling with change detection
+        let lastMenuHash = null;
+        
+        setInterval(async () => {
+          try {
+            const response = await fetch(`/api/v1/menus/${config.menuId}/last-updated/`);
+            if (response.ok) {
+              const data = await response.json();
+              const currentHash = data.hash || data.last_updated;
+              
+              if (lastMenuHash && lastMenuHash !== currentHash) {
+                console.log('POS data changed, refreshing menu...');
+                loadMenuWithPosSync();
+              }
+              
+              lastMenuHash = currentHash;
+            }
+          } catch (error) {
+            // Silent fail for webhook checks
+          }
+        }, 5000); // Check for changes every 5 seconds
+      }
+
+      // Initialize everything
+      document.addEventListener('DOMContentLoaded', () => {
+        loadMenuWithPosSync();
+        startAutoRefresh();
+        initializePosWebhookListener();
+        
+        // Request fullscreen if specified
+        const fullscreen = new URLSearchParams(location.search).get('fullscreen');
+        if (fullscreen === 'true') {
+          document.documentElement.requestFullscreen?.();
+        }
+      });
+
+      // Handle visibility changes (pause when not visible)
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && connectionRetries > 0) {
+          // Refresh when coming back from hidden state
+          loadMenuWithPosSync();
+        }
+      });
+    </script>
+  </body>
+</html>

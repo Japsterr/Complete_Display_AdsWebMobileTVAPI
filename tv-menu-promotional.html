@@ -1,0 +1,682 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Promotional Menu Display</title>
+    <style>
+        html,body { height:100%; margin:0; overflow:hidden }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color:#fff; margin:0; padding:0 
+        }
+        
+        /* Dynamic promotional backgrounds */
+        .promo-morning { background: linear-gradient(135deg, #ff9a56, #ffd23f) }
+        .promo-lunch { background: linear-gradient(135deg, #667eea, #764ba2) }
+        .promo-happy-hour { background: linear-gradient(135deg, #f093fb, #f5576c) }
+        .promo-price-drop { background: linear-gradient(135deg, #ff6b6b, #ee5a24) }
+        .promo-combo { background: linear-gradient(135deg, #4ecdc4, #44a08d) }
+        .promo-chef { background: linear-gradient(135deg, #2c3e50, #3498db) }
+        .promo-default { background: linear-gradient(135deg, #1e3c72, #2a5298) }
+        
+        /* Layout system */
+        .single-screen { display:flex; flex-direction:column; height:100vh; padding:20px }
+        .dual-screen { display:grid; grid-template-columns: 1fr 1fr; height:100vh; gap:20px; padding:20px }
+        .triple-screen { display:grid; grid-template-columns: 1fr 1fr 1fr; height:100vh; gap:15px; padding:15px }
+        
+        /* Promotional header */
+        .promo-header { 
+            display:flex; justify-content:space-between; align-items:center; 
+            margin-bottom:20px; background:rgba(255,255,255,0.15); 
+            border-radius:12px; padding:20px; backdrop-filter:blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3)
+        }
+        
+        .menu-title { 
+            font-size:48px; font-weight:700; margin:0; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text; 
+            background-clip: text; 
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .promo-badge { 
+            padding:12px 24px; border-radius:25px; font-size:16px; font-weight:700;
+            background:#FF6B35; color:#fff; text-transform:uppercase;
+            box-shadow: 0 4px 15px rgba(255,107,53,0.4);
+            animation: badgePulse 2s ease-in-out infinite
+        }
+        
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255,107,53,0.4) }
+            50% { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255,107,53,0.6) }
+        }
+        
+        /* Mega promotional banner */
+        .mega-promo-banner { 
+            background: linear-gradient(90deg, #ff6b6b, #ffa726, #66bb6a, #42a5f5);
+            background-size: 300% 300%;
+            color:#fff; padding:20px; margin-bottom:25px; border-radius:15px;
+            text-align:center; font-size:28px; font-weight:700;
+            animation: megaGradient 4s ease-in-out infinite;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            border: 3px solid rgba(255,255,255,0.3)
+        }
+        
+        @keyframes megaGradient {
+            0%, 100% { background-position: 0% 50% }
+            50% { background-position: 100% 50% }
+        }
+        
+        /* Enhanced featured section */
+        .featured-section { 
+            margin-bottom:25px; background:rgba(255,255,255,0.1); 
+            border-radius:15px; padding:25px; 
+            border:3px solid rgba(255,215,0,0.6);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2)
+        }
+        
+        .featured-item { 
+            display:flex; align-items:center; gap:25px; padding:20px;
+            background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,165,0,0.3));
+            border-radius:12px; position:relative; overflow:hidden
+        }
+        
+        .featured-item::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100% }
+            100% { left: 100% }
+        }
+        
+        .featured-badge { 
+            background:#FFD700; color:#000; padding:8px 16px; border-radius:20px;
+            font-size:14px; font-weight:700; text-transform:uppercase;
+            box-shadow: 0 4px 10px rgba(255,215,0,0.4)
+        }
+        
+        .featured-details { flex:1; z-index:1 }
+        .featured-name { font-size:32px; font-weight:700; margin-bottom:8px }
+        .featured-description { font-size:18px; color:#f0f0f0; line-height:1.4 }
+        .featured-price { 
+            font-size:36px; color:#4CAF50; font-weight:700;
+            padding:15px 20px; background:rgba(76,175,80,0.2); 
+            border-radius:10px; border:2px solid #4CAF50
+        }
+        
+        /* Categories with promotional styling */
+        .categories-container { 
+            flex:1; display:flex; gap:25px; overflow:hidden 
+        }
+        
+        .category { 
+            flex:1; background:rgba(255,255,255,0.1); border-radius:15px; 
+            padding:0; backdrop-filter:blur(5px); 
+            border:2px solid rgba(255,255,255,0.2);
+            display:flex; flex-direction:column; min-height:0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2)
+        }
+        
+        .category-header { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            color:#fff; padding:18px; margin:0; border-radius:15px 15px 0 0;
+            font-size:26px; font-weight:700; text-align:center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            position:relative; overflow:hidden
+        }
+        
+        .category-header::after {
+            content: '';
+            position:absolute; top:0; left:0; right:0; bottom:0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            animation: categoryShine 4s ease-in-out infinite;
+        }
+        
+        @keyframes categoryShine {
+            0%, 100% { opacity: 0 }
+            50% { opacity: 1 }
+        }
+        
+        .category-items { 
+            flex:1; overflow-y:auto; padding:15px; scrollbar-width:none
+        }
+        .category-items::-webkit-scrollbar { display:none }
+        
+        /* Enhanced menu items */
+        .menu-item { 
+            padding:15px 18px; margin-bottom:12px;
+            border-radius:10px; display:flex; justify-content:space-between; 
+            align-items:center; transition:all 0.3s ease;
+            background:rgba(255,255,255,0.08); 
+            border:1px solid rgba(255,255,255,0.15);
+            position:relative; overflow:hidden
+        }
+        
+        .menu-item:hover { 
+            background:rgba(255,255,255,0.15); 
+            transform:translateX(8px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3)
+        }
+        
+        .menu-item.promotion { 
+            background: linear-gradient(135deg, rgba(255,193,7,0.25), rgba(255,152,0,0.25));
+            border:2px solid #FFC107; 
+            animation: promotionGlow 2s ease-in-out infinite;
+            box-shadow: 0 0 15px rgba(255,193,7,0.5)
+        }
+        
+        @keyframes promotionGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(255,193,7,0.5) }
+            50% { box-shadow: 0 0 25px rgba(255,193,7,0.8) }
+        }
+        
+        .menu-item.featured-special {
+            background: linear-gradient(135deg, rgba(255,20,147,0.3), rgba(255,105,180,0.3));
+            border:2px solid #FF69B4;
+            animation: specialGlow 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes specialGlow {
+            0%, 100% { transform: scale(1) }
+            50% { transform: scale(1.03) }
+        }
+        
+        .item-details { flex:1 }
+        .item-name { 
+            font-weight:700; font-size:20px; margin-bottom:6px;
+            display:flex; align-items:center; gap:10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3)
+        }
+        .item-description { 
+            font-size:15px; color:#e0e0e0; line-height:1.4 
+        }
+        .item-price { 
+            color:#4CAF50; font-weight:700; font-size:22px;
+            padding:10px 15px; background:rgba(76,175,80,0.15); 
+            border-radius:8px; border:1px solid rgba(76,175,80,0.5);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3)
+        }
+        
+        .item-special-offer { 
+            background:#FF5722; color:#fff; padding:6px 10px; border-radius:6px;
+            font-size:13px; font-weight:600; margin-left:10px;
+            animation: offerBlink 2s ease-in-out infinite;
+            box-shadow: 0 2px 8px rgba(255,87,34,0.4)
+        }
+        
+        @keyframes offerBlink {
+            0%, 100% { opacity: 1 }
+            50% { opacity: 0.7 }
+        }
+        
+        /* Real-time status indicators */
+        .status-indicators { 
+            position:fixed; top:15px; right:15px; z-index:1000;
+            display:flex; flex-direction:column; gap:10px 
+        }
+        
+        .status-item { 
+            padding:8px 15px; background:rgba(0,0,0,0.8); 
+            border-radius:20px; font-size:14px; display:flex; 
+            align-items:center; gap:8px; backdrop-filter:blur(10px)
+        }
+        
+        .status-connected { border:2px solid #4CAF50 }
+        .status-syncing { border:2px solid #FF9800; animation: pulse 1s ease-in-out infinite }
+        .status-error { border:2px solid #f44336 }
+        
+        /* Loading states */
+        .loading { 
+            display:flex; align-items:center; justify-content:center;
+            font-size:20px; padding:50px; flex-direction:column; gap:20px
+        }
+        
+        .spinner { 
+            border:4px solid rgba(255,255,255,0.3); border-top:4px solid #fff;
+            border-radius:50%; width:40px; height:40px; 
+            animation:spin 1s linear infinite
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg) }
+            100% { transform: rotate(360deg) }
+        }
+        
+        /* Dynamic theme transitions */
+        .theme-transition {
+            transition: background 0.5s ease-in-out;
+        }
+        
+        /* Emergency/Alert styling */
+        .emergency-banner {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color:#fff; padding:15px; text-align:center; font-size:18px;
+            font-weight:700; animation: emergencyPulse 1s ease-in-out infinite;
+            border-radius:8px; margin-bottom:20px;
+        }
+        
+        @keyframes emergencyPulse {
+            0%, 100% { opacity: 1 }
+            50% { opacity: 0.8 }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            .menu-title { font-size:36px }
+            .category-header { font-size:22px }
+            .item-name { font-size:18px }
+            .featured-name { font-size:28px }
+        }
+        
+        @media (max-width: 800px) {
+            .dual-screen, .triple-screen { 
+                grid-template-columns: 1fr; 
+                grid-template-rows: auto 1fr 
+            }
+        }
+    </style>
+</head>
+<body class="promo-default theme-transition">
+    <!-- Real-time status indicators -->
+    <div class="status-indicators">
+        <div class="status-item status-connected" id="pos-status">
+            <span>🟢</span>
+            <span id="status-text">POS Connected</span>
+        </div>
+        <div class="status-item" id="promo-status" style="display:none">
+            <span>🎯</span>
+            <span id="promo-count">0 Active Promotions</span>
+        </div>
+    </div>
+
+    <div id="root" class="dual-screen">
+        <!-- Promotional header -->
+        <div class="promo-header" style="grid-column: 1 / -1">
+            <div class="menu-title" id="menu-title">Digital Menu Board</div>
+            <div class="promo-badge" id="promo-badge">LIVE MENU</div>
+        </div>
+
+        <!-- Emergency/Special announcements -->
+        <div class="emergency-banner" id="emergency-banner" style="grid-column: 1 / -1; display:none">
+            <div id="emergency-text">⚠️ Important Announcement</div>
+        </div>
+
+        <!-- Mega promotional banner -->
+        <div class="mega-promo-banner" id="mega-banner" style="grid-column: 1 / -1; display:none">
+            <div id="mega-promo-text">🎉 Special Offer: Buy 2 Get 1 Free on Selected Items!</div>
+        </div>
+
+        <!-- Enhanced featured section -->
+        <div class="featured-section" id="featured-section" style="grid-column: 1 / -1">
+            <div class="featured-item" id="featured-item">
+                <div class="featured-badge">Featured Special</div>
+                <div class="featured-details">
+                    <div class="featured-name" id="featured-name">Loading...</div>
+                    <div class="featured-description" id="featured-description"></div>
+                </div>
+                <div class="featured-price" id="featured-price">--</div>
+            </div>
+        </div>
+
+        <!-- Categories container -->
+        <div class="categories-container" id="categories-container" style="grid-column: 1 / -1">
+            <div class="loading">
+                <div class="spinner"></div>
+                <div>Loading promotional menu...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const config = {
+            menuId: new URLSearchParams(location.search).get('menu') || 1,
+            autoRefresh: parseInt(new URLSearchParams(location.search).get('refresh') || '10', 10),
+            featuredRotate: parseInt(new URLSearchParams(location.search).get('rotate') || '8', 10),
+            layout: new URLSearchParams(location.search).get('layout') || 'dual',
+            promoTheme: new URLSearchParams(location.search).get('theme') || 'default',
+            enablePromoEngine: true
+        };
+
+        // State management
+        let currentMenu = null;
+        let promotionalData = null;
+        let featuredIndex = 0;
+        let promoIndex = 0;
+        let currentTheme = config.promoTheme;
+
+        // Initialize
+        setLayout(config.layout);
+        setPromotionalTheme(config.promoTheme);
+
+        // Enhanced menu loading with promotional detection
+        async function loadMenuWithPromotions() {
+            updateStatus('syncing', 'Loading menu...');
+            
+            try {
+                // Load menu data
+                const menuResponse = await fetch(`/api/v1/menus/${config.menuId}/`);
+                if (!menuResponse.ok) throw new Error('Failed to load menu');
+                
+                const menuData = await menuResponse.json();
+                currentMenu = menuData;
+                
+                // Detect promotions if engine is enabled
+                if (config.enablePromoEngine) {
+                    await detectAndLoadPromotions();
+                }
+                
+                // Render menu with promotional enhancements
+                renderPromotionalMenu(menuData);
+                updateStatus('connected', 'Menu loaded');
+                
+            } catch (error) {
+                console.error('Error loading menu:', error);
+                updateStatus('error', 'Failed to load menu');
+                showErrorState(error.message);
+            }
+        }
+
+        // Detect promotions using the promotion engine
+        async function detectAndLoadPromotions() {
+            try {
+                const response = await fetch('/api/v1/promotional-templates/detect-promotions/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ menu_id: config.menuId })
+                });
+                
+                if (response.ok) {
+                    const promotional_data = await response.json();
+                    promotionalData = promotional_data;
+                    console.log('Promotions detected:', promotional_data.promotions_detected);
+                    
+                    // Update promotional status
+                    updatePromotionalStatus(promotional_data.promotions_detected);
+                    
+                    // Apply promotional theme if high-priority promotions exist
+                    const highPriorityPromos = promotional_data.promotions.filter(p => p.priority === 'high');
+                    if (highPriorityPromos.length > 0) {
+                        const recommendedTheme = highPriorityPromos[0].template_recommendation;
+                        setPromotionalTheme(recommendedTheme);
+                    }
+                }
+            } catch (error) {
+                console.error('Error detecting promotions:', error);
+            }
+        }
+
+        // Render menu with promotional enhancements
+        function renderPromotionalMenu(menuData) {
+            document.getElementById('menu-title').textContent = menuData.name || 'Digital Menu Board';
+            
+            const container = document.getElementById('categories-container');
+            const categories = menuData.categories || [];
+            const items = menuData.items || [];
+            
+            // Show mega banner if high-priority promotions exist
+            showMegaPromotionalBanner();
+            
+            // Render categories
+            if (categories.length === 0) {
+                container.innerHTML = `
+                    <div class="category">
+                        <div class="category-header">Special Menu</div>
+                        <div class="category-items" id="category-0"></div>
+                    </div>
+                `;
+                renderPromotionalItems('category-0', items);
+            } else {
+                container.innerHTML = categories.map(cat => `
+                    <div class="category">
+                        <div class="category-header">${cat.name}</div>
+                        <div class="category-items" id="category-${cat.category_id}"></div>
+                    </div>
+                `).join('');
+                
+                categories.forEach(cat => {
+                    const categoryItems = items.filter(item => item.category === cat.category_id);
+                    renderPromotionalItems(`category-${cat.category_id}`, categoryItems);
+                });
+            }
+            
+            // Initialize enhanced featured rotation
+            initializePromotionalFeatured(items);
+        }
+
+        // Render items with promotional enhancements
+        function renderPromotionalItems(containerId, items) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            container.innerHTML = items.map(item => {
+                const isPromotion = item.promotion_flag || item.special_offer;
+                const isAvailable = item.available !== false;
+                const isFeaturedSpecial = isPromotionalItem(item);
+                
+                return `
+                    <div class="menu-item ${isPromotion ? 'promotion' : ''} ${isFeaturedSpecial ? 'featured-special' : ''} ${!isAvailable ? 'unavailable' : ''}" 
+                         data-pos-id="${item.pos_item_id || ''}" 
+                         data-promotion="${isPromotion}">
+                        <div class="item-details">
+                            <div class="item-name">
+                                ${isFeaturedSpecial ? '⭐ ' : ''}${item.name}
+                                ${isPromotion ? `<span class="item-special-offer">${item.special_offer || 'Special!'}</span>` : ''}
+                                ${!isAvailable ? '<span style="color:#f44336; font-size:12px;">UNAVAILABLE</span>' : ''}
+                            </div>
+                            ${item.description ? `<div class="item-description">${item.description}</div>` : ''}
+                        </div>
+                        <div class="item-price">${item.currency || 'R'}${item.price}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Check if item is promotional based on detection data
+        function isPromotionalItem(item) {
+            if (!promotionalData || !promotionalData.promotions) return false;
+            return promotionalData.promotions.some(promo => 
+                promo.item_id === item.id && promo.priority === 'high'
+            );
+        }
+
+        // Show mega promotional banner
+        function showMegaPromotionalBanner() {
+            const banner = document.getElementById('mega-banner');
+            const text = document.getElementById('mega-promo-text');
+            
+            if (promotionalData && promotionalData.promotions.length > 0) {
+                const highPriorityPromos = promotionalData.promotions.filter(p => p.priority === 'high');
+                if (highPriorityPromos.length > 0) {
+                    banner.style.display = 'block';
+                    text.textContent = `🎉 ${highPriorityPromos[0].offer_text}`;
+                    
+                    // Rotate through high-priority promotions
+                    if (highPriorityPromos.length > 1) {
+                        let bannerIndex = 0;
+                        setInterval(() => {
+                            bannerIndex = (bannerIndex + 1) % highPriorityPromos.length;
+                            text.textContent = `🎉 ${highPriorityPromos[bannerIndex].offer_text}`;
+                        }, 12000); // 12 seconds per banner
+                    }
+                }
+            }
+        }
+
+        // Enhanced featured rotation with promotional priority
+        function initializePromotionalFeatured(items) {
+            let featuredItems = items.filter(item => item.available !== false);
+            
+            // Prioritize promotional items for featured rotation
+            if (promotionalData && promotionalData.promotions.length > 0) {
+                const promoItemIds = promotionalData.promotions.map(p => p.item_id);
+                const promoItems = featuredItems.filter(item => promoItemIds.includes(item.id));
+                const regularItems = featuredItems.filter(item => !promoItemIds.includes(item.id));
+                
+                // Put promotional items first in rotation
+                featuredItems = [...promoItems, ...regularItems];
+            }
+            
+            if (featuredItems.length === 0) return;
+            
+            // Show first featured item
+            showEnhancedFeaturedItem(featuredItems[0]);
+            
+            // Start rotation
+            if (config.featuredRotate > 0 && featuredItems.length > 1) {
+                setInterval(() => {
+                    featuredIndex = (featuredIndex + 1) % featuredItems.length;
+                    showEnhancedFeaturedItem(featuredItems[featuredIndex]);
+                }, config.featuredRotate * 1000);
+            }
+        }
+
+        // Show enhanced featured item
+        function showEnhancedFeaturedItem(item) {
+            document.getElementById('featured-name').textContent = item.name;
+            document.getElementById('featured-description').textContent = item.description || '';
+            document.getElementById('featured-price').textContent = `${item.currency || 'R'}${item.price}`;
+            
+            const featuredItem = document.getElementById('featured-item');
+            const badge = document.querySelector('.featured-badge');
+            
+            if (isPromotionalItem(item)) {
+                featuredItem.style.background = 'linear-gradient(135deg, rgba(255,20,147,0.4), rgba(255,105,180,0.4))';
+                featuredItem.style.border = '3px solid #FF69B4';
+                badge.textContent = 'SPECIAL OFFER';
+                badge.style.background = '#FF1493';
+            } else if (item.promotion_flag || item.special_offer) {
+                featuredItem.style.background = 'linear-gradient(135deg, rgba(255,193,7,0.4), rgba(255,152,0,0.4))';
+                featuredItem.style.border = '3px solid #FFC107';
+                badge.textContent = 'FEATURED SPECIAL';
+                badge.style.background = '#FF6B35';
+            } else {
+                featuredItem.style.background = 'linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,165,0,0.3))';
+                featuredItem.style.border = '3px solid #FFD700';
+                badge.textContent = 'FEATURED';
+                badge.style.background = '#FFD700';
+            }
+        }
+
+        // Set promotional theme
+        function setPromotionalTheme(theme) {
+            const body = document.body;
+            body.className = body.className.replace(/promo-\w+/, '');
+            body.classList.add(`promo-${theme}`, 'theme-transition');
+            
+            const badge = document.getElementById('promo-badge');
+            const themeData = {
+                'morning': { text: 'MORNING SPECIAL', bg: '#ff9a56' },
+                'lunch': { text: 'LUNCH DEAL', bg: '#667eea' },
+                'happy-hour': { text: 'HAPPY HOUR', bg: '#f093fb' },
+                'price-drop': { text: 'SALE ALERT', bg: '#ff6b6b' },
+                'combo': { text: 'COMBO DEAL', bg: '#4ecdc4' },
+                'chef': { text: 'CHEF SPECIAL', bg: '#2c3e50' },
+                'default': { text: 'LIVE MENU', bg: '#FF6B35' }
+            };
+            
+            const themeInfo = themeData[theme] || themeData.default;
+            badge.textContent = themeInfo.text;
+            badge.style.background = themeInfo.bg;
+            
+            currentTheme = theme;
+        }
+
+        // Layout management
+        function setLayout(layout) {
+            const root = document.getElementById('root');
+            root.className = root.className.replace(/\w+-screen/, '') + ` ${layout}-screen`;
+        }
+
+        // Status management
+        function updateStatus(status, message) {
+            const statusEl = document.getElementById('pos-status');
+            const textEl = document.getElementById('status-text');
+            
+            statusEl.className = `status-item status-${status}`;
+            
+            const statusIcons = {
+                'connected': '🟢',
+                'syncing': '🟡',
+                'error': '🔴'
+            };
+            
+            statusEl.querySelector('span').textContent = statusIcons[status] || '🟡';
+            textEl.textContent = message;
+        }
+
+        // Update promotional status
+        function updatePromotionalStatus(count) {
+            const promoStatus = document.getElementById('promo-status');
+            const promoCount = document.getElementById('promo-count');
+            
+            if (count > 0) {
+                promoStatus.style.display = 'flex';
+                promoCount.textContent = `${count} Active Promotions`;
+            } else {
+                promoStatus.style.display = 'none';
+            }
+        }
+
+        // Error state display
+        function showErrorState(message) {
+            document.getElementById('categories-container').innerHTML = `
+                <div class="loading">
+                    <div style="color:#f44336; font-size:24px;">❌ Error</div>
+                    <div style="font-size:16px; margin-top:10px">${message}</div>
+                    <div style="font-size:14px; margin-top:15px">Retrying in 30 seconds...</div>
+                </div>
+            `;
+        }
+
+        // Auto-refresh with promotional updates
+        function startEnhancedAutoRefresh() {
+            if (config.autoRefresh > 0) {
+                setInterval(() => {
+                    loadMenuWithPromotions();
+                }, config.autoRefresh * 1000);
+            }
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMenuWithPromotions();
+            startEnhancedAutoRefresh();
+            
+            // Request fullscreen if specified
+            const fullscreen = new URLSearchParams(location.search).get('fullscreen');
+            if (fullscreen === 'true') {
+                document.documentElement.requestFullscreen?.();
+            }
+        });
+
+        // Handle theme changes based on time
+        setInterval(() => {
+            if (config.promoTheme === 'auto') {
+                const now = new Date();
+                const hour = now.getHours();
+                
+                let autoTheme = 'default';
+                if (hour >= 6 && hour < 11) autoTheme = 'morning';
+                else if (hour >= 11 && hour < 15) autoTheme = 'lunch';
+                else if (hour >= 15 && hour < 18) autoTheme = 'happy-hour';
+                
+                if (autoTheme !== currentTheme) {
+                    setPromotionalTheme(autoTheme);
+                }
+            }
+        }, 60000); // Check every minute
+    </script>
+</body>
+</html>
