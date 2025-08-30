@@ -4,7 +4,7 @@ declare module '@hello-pangea/dnd' {
   export class DragDropContext extends React.Component<DragDropContextProps> {}
   export interface DroppableProvided { innerRef: (el: HTMLElement | null) => any; droppableProps: any; placeholder: React.ReactNode; }
   export interface DroppableStateSnapshot { isDraggingOver: boolean; }
-  export interface DroppableProps { droppableId: string; children: (provided: DroppableProvided, snapshot: DroppableStateSnapshot) => React.ReactNode; }
+  export interface DroppableProps { droppableId: string; type?: string; children: (provided: DroppableProvided, snapshot: DroppableStateSnapshot) => React.ReactNode; }
   export class Droppable extends React.Component<DroppableProps> {}
   export interface DraggableProvided { innerRef: (el: HTMLElement | null) => any; draggableProps: any; dragHandleProps: any; }
   export interface DraggableStateSnapshot { isDragging: boolean; }

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Box, Button, Heading, Input, FormControl, FormLabel, VStack, HStack, Textarea, Select, Image } from '@chakra-ui/react';
 import { createMenu, fetchMenu, updateMenu, createMenuCategory, createMenuItem, patchMenuItem, deleteMenuItem, updateMenuCategory, deleteMenuCategory, reorderMenu } from '../services/api';
 import { useParams } from 'react-router-dom';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import type { DropResult } from '@hello-pangea/dnd';
 
 export default function MenuEditor(){
   const { id } = useParams();
@@ -362,4 +363,3 @@ export default function MenuEditor(){
     </Box>
   );
 }
-Sat Aug 30 13:58:22 UTC 2025
