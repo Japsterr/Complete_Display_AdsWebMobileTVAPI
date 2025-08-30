@@ -195,4 +195,78 @@ export const bulkUnassignAllApi = async (payload: Omit<UnassignPayload, 'display
   return res.data;
 };
 
+// Media API functions
+export const uploadMedia = async (file: File, targetOrientation?: string): Promise<any> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (targetOrientation) {
+    formData.append('target_orientation', targetOrientation);
+  }
+  
+  const response = await api.post('/media/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const fetchMedia = async (): Promise<any[]> => {
+  const response = await api.get('/media/');
+  return response.data.results || response.data;
+};
+
+export const updateMedia = async (mediaId: number, data: { name: string }): Promise<void> => {
+  await api.patch(`/media/${mediaId}/`, data);
+};
+
+export const deleteMedia = async (mediaId: number): Promise<void> => {
+  await api.delete(`/media/${mediaId}/`);
+};
+
+// Menu API functions
+export const fetchMenus = async (): Promise<any[]> => {
+  const response = await api.get('/menus/');
+  return response.data.results || response.data;
+};
+
+export const createMenu = async (menuData: any): Promise<any> => {
+  const response = await api.post('/menus/', menuData);
+  return response.data;
+};
+
+export const updateMenu = async (menuId: number, menuData: any): Promise<any> => {
+  const response = await api.put(`/menus/${menuId}/`, menuData);
+  return response.data;
+};
+
+export const deleteMenu = async (menuId: number): Promise<void> => {
+  await api.delete(`/menus/${menuId}/`);
+};
+
+export const fetchMenu = async (menuId: number): Promise<any> => {
+  const response = await api.get(`/menus/${menuId}/`);
+  return response.data;
+};
+
+export const fetchMenuItems = async (menuId?: number): Promise<any[]> => {
+  const url = menuId ? `/menu-items/?menu=${menuId}` : '/menu-items/';
+  const response = await api.get(url);
+  return response.data.results || response.data;
+};
+
+export const createMenuItem = async (itemData: any): Promise<any> => {
+  const response = await api.post('/menu-items/', itemData);
+  return response.data;
+};
+
+export const updateMenuItem = async (itemId: number, itemData: any): Promise<any> => {
+  const response = await api.put(`/menu-items/${itemId}/`, itemData);
+  return response.data;
+};
+
+export const deleteMenuItem = async (itemId: number): Promise<void> => {
+  await api.delete(`/menu-items/${itemId}/`);
+};
+
 export default api;

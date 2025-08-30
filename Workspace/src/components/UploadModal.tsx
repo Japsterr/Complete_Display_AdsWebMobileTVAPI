@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api from "../services/api";
+import { uploadMedia } from "../services/api";
 
 export default function UploadModal({ onClose }: { onClose: () => void }) {
   const [files, setFiles] = useState<File[]>([]);
@@ -22,13 +22,7 @@ export default function UploadModal({ onClose }: { onClose: () => void }) {
     
     try {
       for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("name", file.name);
-        
-        await api.post("/media/", formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        await uploadMedia(file);
       }
       onClose(); // Close modal on success
     } catch (err: any) {

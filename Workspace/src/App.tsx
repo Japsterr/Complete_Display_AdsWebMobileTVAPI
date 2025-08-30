@@ -21,6 +21,8 @@ import CampaignEditor from "./pages/CampaignEditor";
 import CampaignMediaEditor from "./pages/CampaignMediaEditor";
 import ApiTestPage from "./pages/ApiTestPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import MenuManagementPage from "./pages/MenuManagementPage";
+import MenuEditor from "./pages/MenuEditor";
 
 function App() {
   return (
@@ -53,6 +55,9 @@ function App() {
           <Route path="/displays" element={<DisplayManagementPage />} />
           <Route path="/displays/new" element={<RegisterDisplayPage />} />
           <Route path="/displays/:id" element={<DisplayDetailPage />} />
+          <Route path="/menus" element={<MenuManagementPage />} />
+          <Route path="/menus/new" element={<MenuEditor />} />
+          <Route path="/menus/:id/edit" element={<MenuEditor />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import api from "../services/api.ts";
+import { fetchMedia, deleteMedia, updateMedia } from "../services/api";
 import UploadModal from "../components/UploadModal.tsx";
 
 type Media = {
@@ -56,44 +56,50 @@ export default function MediaLibraryPage() {
     setPreviewMedia(mediaItem);
   };
 
-  const handleEdit = (mediaItem: Media) => {
+  const handleEdit = async (mediaItem: Media) => {
     const newName = prompt("Enter new name:", mediaItem.name);
     if (newName && newName.trim() !== "") {
-      api.patch(`/media/${mediaItem.media_id}/`, { name: newName.trim() })
-        .then(() => {
-          // Refresh media list
-          api.get("/media/").then(res => setMedia(res.data));
-        })
-        .catch(error => {
-          console.error("Error updating media:", error);
-          alert("Failed to update media name");
-        });
+      try {
+        await updateMedia(mediaItem.media_id, { name: newName.trim() });
+        // Refresh media list
+        const updatedMedia = await fetchMedia();
+        setMedia(updatedMedia);
+      } catch (error) {
+        console.error("Error updating media:", error);
+        alert("Failed to update media name");
+      }
     }
   };
 
-  const handleDelete = (mediaItem: Media) => {
+  const handleDelete = async (mediaItem: Media) => {
     if (confirm(`Are you sure you want to delete "${mediaItem.name}"?`)) {
-      api.delete(`/media/${mediaItem.media_id}/`)
-        .then(() => {
-          // Remove from local state
-          setMedia(media.filter(m => m.media_id !== mediaItem.media_id));
-        })
-        .catch(error => {
-          console.error("Error deleting media:", error);
-          alert("Failed to delete media");
-        });
+      try {
+        await deleteMedia(mediaItem.media_id);
+        // Remove from local state
+        setMedia(media.filter(m => m.media_id !== mediaItem.media_id));
+      } catch (error) {
+        console.error("Error deleting media:", error);
+        alert("Failed to delete media");
+      }
     }
   };
 
   useEffect(() => {
-    api.get("/media/").then(res => {
-      console.log("Media API response:", res.data);
-      if (res.data.length > 0) {
-        console.log("First media item:", res.data[0]);
-        console.log("Available fields:", Object.keys(res.data[0]));
+    const loadMedia = async () => {
+      try {
+        const mediaData = await fetchMedia();
+        console.log("Media API response:", mediaData);
+        if (mediaData.length > 0) {
+          console.log("First media item:", mediaData[0]);
+          console.log("Available fields:", Object.keys(mediaData[0]));
+        }
+        setMedia(mediaData);
+      } catch (error) {
+        console.error("Error loading media:", error);
       }
-      setMedia(res.data);
-    });
+    };
+    
+    loadMedia();
   }, []);
 
   return (
@@ -210,10 +216,15 @@ export default function MediaLibraryPage() {
 
       {uploadOpen && (
         <UploadModal 
-          onClose={() => {
+          onClose={async () => {
             setUploadOpen(false);
             // Refresh media list
-            api.get("/media/").then(res => setMedia(res.data));
+            try {
+              const updatedMedia = await fetchMedia();
+              setMedia(updatedMedia);
+            } catch (error) {
+              console.error("Error refreshing media:", error);
+            }
           }}
         />
       )}
