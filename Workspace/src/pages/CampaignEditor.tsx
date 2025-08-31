@@ -86,9 +86,10 @@ export default function CampaignEditor() {
   return (
     <div className="container-fluid">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h2 mb-0">{isEdit ? "Edit Campaign" : "Create New Campaign"}</h1>
+  <h1 className="h2 mb-0" data-testid="campaign-editor-title">{isEdit ? "Edit Campaign" : "Create New Campaign"}</h1>
         <button
           className="btn btn-primary"
+          aria-label="Save Campaign Button"
           onClick={handleSave}
           disabled={loading}
         >
@@ -113,6 +114,7 @@ export default function CampaignEditor() {
               <div className="mb-3">
                 <label className="form-label">Campaign Name</label>
                 <input
+                  aria-label="Campaign Name Input"
                   type="text"
                   className="form-control"
                   value={form.name}
@@ -123,6 +125,7 @@ export default function CampaignEditor() {
               <div className="mb-3">
                 <label className="form-label">Description</label>
                 <textarea
+                  aria-label="Campaign Description Input"
                   className="form-control"
                   rows={4}
                   value={form.description}
@@ -135,6 +138,7 @@ export default function CampaignEditor() {
                   <div className="mb-3">
                     <label className="form-label">Screen Orientation</label>
                     <select
+                      aria-label="Screen Orientation Select"
                       className="form-select"
                       value={form.screen_orientation}
                       onChange={e => setForm(f => ({ ...f, screen_orientation: e.target.value as any }))}
@@ -149,6 +153,7 @@ export default function CampaignEditor() {
                   <div className="mb-3">
                     <label className="form-label">Normalize To Orientation</label>
                     <select
+                      aria-label="Normalize Orientation Select"
                       className="form-select"
                       value={form.normalize_to_orientation}
                       onChange={e => setForm(f => ({ ...f, normalize_to_orientation: e.target.value as any }))}
@@ -171,6 +176,7 @@ export default function CampaignEditor() {
               <h5 className="card-title mb-0">Playlist</h5>
               <button
                 className="btn btn-outline-primary btn-sm"
+                aria-label="Open Add Media Modal"
                 onClick={() => setShowMediaModal(true)}
               >
                 Add Media
@@ -180,10 +186,11 @@ export default function CampaignEditor() {
               {playlist.length === 0 ? (
                 <div className="text-center text-muted py-5">
                   <p>No media added to playlist yet.</p>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => setShowMediaModal(true)}
-                  >
+                    <button
+                      className="btn btn-primary"
+                      aria-label="Add First Media Button"
+                      onClick={() => setShowMediaModal(true)}
+                    >
                     Add Your First Media
                   </button>
                 </div>
@@ -210,6 +217,7 @@ export default function CampaignEditor() {
                         <div className="d-flex align-items-center mt-1">
                           <label className="form-label small text-muted me-2 mb-0">Duration (s):</label>
                           <input
+                            aria-label="Playlist Item Duration Input"
                             type="number"
                             className="form-control form-control-sm"
                             style={{ width: '80px' }}
@@ -227,6 +235,7 @@ export default function CampaignEditor() {
                       </div>
                       <button
                         className="btn btn-outline-danger btn-sm"
+                        aria-label={`Remove Playlist Item ${item.file_name}`}
                         onClick={() => setPlaylist(p => p.filter((_, i) => i !== idx))}
                       >
                         Remove
@@ -242,16 +251,16 @@ export default function CampaignEditor() {
       {/* Media Library Modal for adding media */}
       {showMediaModal && (
         <div className="modal show d-block" style={{ zIndex: 1050 }}>
-          <div className="modal-backdrop show" onClick={() => setShowMediaModal(false)}></div>
+          <div className="modal-backdrop show" onClick={() => setShowMediaModal(false)} aria-label="Media Modal Backdrop"></div>
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Add Media to Playlist</h5>
-                <button type="button" className="btn-close" onClick={() => setShowMediaModal(false)}></button>
+                <button type="button" className="btn-close" aria-label="Close Media Modal" onClick={() => setShowMediaModal(false)}></button>
               </div>
               <div className="modal-body">
                 <div className="text-center text-muted py-5">
-                  <p>Media library integration coming soon...</p>
+                  <p data-testid="media-library-placeholder">Media library integration coming soon...</p>
                   <small>You'll be able to select media files from your library here.</small>
                 </div>
               </div>
@@ -259,6 +268,7 @@ export default function CampaignEditor() {
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  aria-label="Close Media Modal Footer Button"
                   onClick={() => setShowMediaModal(false)}
                 >
                   Close
@@ -266,6 +276,7 @@ export default function CampaignEditor() {
                 <button
                   type="button"
                   className="btn btn-primary"
+                  aria-label="Add Selected Media Button"
                   onClick={() => setShowMediaModal(false)}
                 >
                   Add Selected Media

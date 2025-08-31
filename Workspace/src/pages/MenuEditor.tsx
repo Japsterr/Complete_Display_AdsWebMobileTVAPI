@@ -203,7 +203,7 @@ export default function MenuEditor(){
 
   return (
     <Box p={6}>
-      <Heading mb={4}>{id === 'new' ? 'Create Menu' : 'Edit Menu'}</Heading>
+  <Heading mb={4} data-testid="menu-editor-title">{id === 'new' ? 'Create Menu' : 'Edit Menu'}</Heading>
       <FormControl mb={4}>
         <FormLabel>Name</FormLabel>
         <Input value={name} onChange={(e)=>setName(e.target.value)} />
@@ -212,8 +212,8 @@ export default function MenuEditor(){
       <VStack align="stretch" spacing={4} mb={6}>
         <Heading size="md">Categories</Heading>
         <HStack>
-          <Input placeholder="New category name" value={newCategoryName} onChange={(e)=>setNewCategoryName(e.target.value)} />
-          <Button onClick={addCategory} isLoading={loading}>Add</Button>
+          <Input placeholder="New category name" aria-label="New Category Name" value={newCategoryName} onChange={(e)=>setNewCategoryName(e.target.value)} />
+          <Button onClick={addCategory} isLoading={loading} aria-label="Add Category Button">Add</Button>
         </HStack>
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="categories-droppable" type="CATEGORY">
@@ -222,16 +222,16 @@ export default function MenuEditor(){
                   {categories.map((c, idx) => (
                     <Draggable key={c.category_id} draggableId={`cat-${c.category_id}`} index={idx}>
                       {(prov: any) => (
-                        <HStack ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps} p={2} borderWidth={1} borderRadius={6} justifyContent="space-between">
+                        <HStack ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps} p={2} borderWidth={1} borderRadius={6} justifyContent="space-between" aria-label={`Category Row ${c.name}`} data-testid={`category-row-${c.category_id}`}>
                         <Box>
-                          <Input value={c.name} onChange={(e)=>{
+                          <Input value={c.name} aria-label={`Category Name ${c.name}`} onChange={(e)=>{
                             const v = e.target.value; setCategories(prev=>prev.map(x=> x.category_id===c.category_id?{...x,name:v}:x));
                           }} onBlur={(e)=>updateCategoryName(c.category_id, e.target.value)} />
                         </Box>
                         <HStack>
-                          <Button size="sm" onClick={()=>moveCategory(c.category_id, -1)}>↑</Button>
-                          <Button size="sm" onClick={()=>moveCategory(c.category_id, +1)}>↓</Button>
-                          <Button size="sm" colorScheme="red" onClick={()=>deleteCategory(c.category_id)}>Delete</Button>
+                          <Button size="sm" aria-label={`Move Category ${c.name} Up`} onClick={()=>moveCategory(c.category_id, -1)}>↑</Button>
+                          <Button size="sm" aria-label={`Move Category ${c.name} Down`} onClick={()=>moveCategory(c.category_id, +1)}>↓</Button>
+                          <Button size="sm" colorScheme="red" aria-label={`Delete Category ${c.name}`} onClick={()=>deleteCategory(c.category_id)}>Delete</Button>
                         </HStack>
                       </HStack>
                     )}
@@ -248,33 +248,33 @@ export default function MenuEditor(){
         <Heading size="md">Items</Heading>
   <FormControl>
           <FormLabel>Item name</FormLabel>
-          <Input value={newItem.name} onChange={(e)=>setNewItem({...newItem, name: e.target.value})} />
+          <Input value={newItem.name} aria-label="New Item Name" onChange={(e)=>setNewItem({...newItem, name: e.target.value})} />
         </FormControl>
         <FormControl>
           <FormLabel>Description</FormLabel>
-          <Textarea value={newItem.description} onChange={(e)=>setNewItem({...newItem, description: e.target.value})} />
+          <Textarea value={newItem.description} aria-label="New Item Description" onChange={(e)=>setNewItem({...newItem, description: e.target.value})} />
         </FormControl>
         <HStack>
           <FormControl>
             <FormLabel>Price</FormLabel>
-            <Input value={newItem.price} onChange={(e)=>setNewItem({...newItem, price: e.target.value})} />
+            <Input value={newItem.price} aria-label="New Item Price" onChange={(e)=>setNewItem({...newItem, price: e.target.value})} />
           </FormControl>
           <FormControl>
             <FormLabel>Currency</FormLabel>
-            <Input value={newItem.currency} onChange={(e)=>setNewItem({...newItem, currency: e.target.value})} />
+            <Input value={newItem.currency} aria-label="New Item Currency" onChange={(e)=>setNewItem({...newItem, currency: e.target.value})} />
           </FormControl>
           <FormControl>
             <FormLabel>Category</FormLabel>
-            <Select value={newItem.category} onChange={(e)=>setNewItem({...newItem, category: e.target.value})} placeholder="Uncategorized">
+            <Select value={newItem.category} aria-label="New Item Category" onChange={(e)=>setNewItem({...newItem, category: e.target.value})} placeholder="Uncategorized">
               {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
             </Select>
           </FormControl>
         </HStack>
         <FormControl>
           <FormLabel>Image</FormLabel>
-          <Input type="file" onChange={(e:any)=>setImageFile(e.target.files?.[0]||null)} />
+          <Input type="file" aria-label="New Item Image" onChange={(e:any)=>setImageFile(e.target.files?.[0]||null)} />
         </FormControl>
-        <Button onClick={addItem} isLoading={loading}>Add Item</Button>
+  <Button onClick={addItem} isLoading={loading} aria-label="Add Item Button">Add Item</Button>
         {uploadProgress !== null && (
           <Box w="100%" p={2}>
             <Box bg="gray.200" w="100%" h="10px" borderRadius="6px"><Box bg="blue.400" h="10px" w={`${uploadProgress}%`} borderRadius="6px" /></Box>
