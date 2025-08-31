@@ -8,6 +8,7 @@ import {
   TvIcon
 } from "@heroicons/react/24/outline";
 import api from "../services/api";
+import ThemeToggle from "./ThemeToggle";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -100,8 +101,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </button>
           </div>
 
-          {/* Right: Profile dropdown */}
-          <div className="ms-3">
+          {/* Right: Theme toggle + Profile dropdown */}
+          <div className="d-flex align-items-center gap-3 ms-3">
+            <ThemeToggle />
             <div className="dropdown">
               <button
                 type="button"
