@@ -203,9 +203,8 @@ export const uploadMedia = async (file: File, targetOrientation?: string, descri
   if (description) formData.append('description', description);
   if (targetOrientation) formData.append('target_orientation', targetOrientation);
 
-  const response = await api.post('/media/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  // Let axios/browser set the multipart boundary automatically; do NOT set Content-Type manually.
+  const response = await api.post('/media/', formData);
   return response.data;
 };
 

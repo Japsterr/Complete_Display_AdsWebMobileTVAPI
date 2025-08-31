@@ -290,6 +290,19 @@ class MediaSerializer(serializers.ModelSerializer):
         validated_data['media_type'] = media_type
         return super().create(validated_data)
 
+    def validate(self, attrs):
+        """Provide a defensive default for name if omitted and we have a file.
+
+        This helps avoid 400 errors if the frontend forgets to send a name. The
+        original filename (without path) will be used.
+        """
+        if not attrs.get('name'):
+            file_obj = attrs.get('file')
+            if file_obj and getattr(file_obj, 'name', None):
+                import os
+                attrs['name'] = os.path.basename(file_obj.name)
+        return attrs
+
 class CampaignMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = CampaignMedia

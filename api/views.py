@@ -426,6 +426,61 @@ class MediaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrBusinessMember]
     queryset = Media.objects.all()
     
+    def create(self, request, *args, **kwargs):
+        """Override create to return a debug payload on failure so the frontend
+        can show exact validation errors and incoming request metadata.
+        Wrap in try/except to convert unexpected exceptions into JSON instead
+        of Django's HTML debug page.
+        """
+        import traceback as _traceback
+        try:
+            # Collect incoming keys
+            data_keys = list(request.data.keys())
+            file_keys = list(request.FILES.keys())
+            files_info = []
+            for k in file_keys:
+                f = request.FILES.get(k)
+                try:
+                    files_info.append({
+                        'field': k,
+                        'name': getattr(f, 'name', None),
+                        'size': getattr(f, 'size', None),
+                        'content_type': getattr(f, 'content_type', None),
+                    })
+                except Exception:
+                    files_info.append({'field': k, 'error': 'could not read file metadata'})
+
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                debug_payload = {
+                    'debug': {
+                        'content_type': request.content_type,
+                        'data_keys': data_keys,
+                        'file_keys': file_keys,
+                        'files': files_info,
+                    },
+                    'errors': serializer.errors,
+                }
+                return Response(debug_payload, status=status.HTTP_400_BAD_REQUEST)
+
+            # If valid, save and return created object
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as exc:
+            tb = _traceback.format_exc()
+            err_payload = {
+                'exception': str(exc),
+                'traceback': tb,
+                'debug': {
+                    'content_type': getattr(request, 'content_type', None),
+                    'data_keys': list(request.data.keys()),
+                    'file_keys': list(request.FILES.keys()),
+                }
+            }
+            # Always return JSON so clients (and curl) see the error details
+            return Response(err_payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def get_queryset(self):
         user = self.request.user
         if user.account_type == 'business' and hasattr(user, 'owned_business'):

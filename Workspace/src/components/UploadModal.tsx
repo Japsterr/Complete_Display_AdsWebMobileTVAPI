@@ -26,7 +26,32 @@ export default function UploadModal({ onClose }: { onClose: () => void }) {
       }
       onClose(); // Close modal on success
     } catch (err: any) {
-      setError("Upload failed: " + (err.response?.data?.detail || err.message));
+      // Prefer detailed DRF validation errors if available
+  // Dump the full error to the console to help debugging (response body, headers)
+  console.error('Upload error (full):', err);
+      const resp = err?.response?.data;
+      let msg = '';
+      if (resp) {
+        // If backend returned our debug structure, show debug + errors
+        if (resp.debug || resp.errors) {
+          const dbg = resp.debug ?
+            `content_type=${resp.debug.content_type}; data_keys=${resp.debug.data_keys.join(',')}; file_keys=${resp.debug.file_keys.join(',')}` : '';
+          const errs = resp.errors ?
+            Object.entries(resp.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join('; ') : String(v)}`).join(' | ') : '';
+          msg = [dbg, errs].filter(Boolean).join(' -- ');
+        } else if (typeof resp === 'string') msg = resp;
+        else if (resp.detail) msg = String(resp.detail);
+        else {
+          try {
+            msg = Object.entries(resp).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join('; ') : String(v)}`).join(' | ');
+          } catch (e) {
+            msg = JSON.stringify(resp);
+          }
+        }
+      } else {
+        msg = err.message || 'Unknown error';
+      }
+      setError('Upload failed: ' + msg);
     } finally {
       setUploading(false);
     }
