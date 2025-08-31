@@ -6,7 +6,7 @@ import { renderApp } from '../../test/renderWithRouter';
 // They assume the page components contain some identifying text.
 
 const cases: Array<[path: string, expectedRegex: RegExp]> = [
-  ['/', /home/i],
+  ['/', /mobile-first digital signage/i],
   ['/features', /features/i],
   ['/pricing', /pricing/i],
   ['/contact', /contact/i],
